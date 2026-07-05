@@ -29,6 +29,21 @@ code::
 ~score.stop;   // stop, free synths, clear
 ::
 
+Per-note expression. A note may carry dynamics and articulation as link::Classes/Panola:: properties,
+which are engraved in the score.
+
+strong::Dynamics:: - a one-shot teletype::@dyn^mark^:: places a dynamic mark at that note (e.g.
+teletype::c5_4@dyn^mf^ e5 g5::). The mark is passed straight to Verovio; the standard marks render in the
+dynamics font: teletype::pppp ppp pp p mp mf f ff fff ffff:: plus the accented ones
+teletype::fp sf sfz sffz rf rfz fz sfp::.
+
+strong::Articulation:: - a static teletype::@art[name:on]:: ... teletype::@art[name:off]:: toggles an
+articulation over a passage (several layer and switch off independently); a one-shot teletype::@art^name^::
+marks a single note. Supported names (the friendly name, or its MEI code): teletype::staccato:: (stacc),
+teletype::staccatissimo:: (stacciss), teletype::accent:: (acc), teletype::tenuto:: (ten),
+teletype::marcato:: (marc), teletype::spiccato:: (spicc). Example:
+teletype::c5_4@art[stacc:on] d5 e5 f5@art[stacc:off] g5@art^accent^ a5::.
+
 Requires the link::Classes/Panola:: quark, and a running MusicScene instance (with Verovio working —
 teletype::pip install verovio::). Set strong::space:: to match the project's musicscene/space setting.
 '''
