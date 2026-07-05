@@ -3,7 +3,8 @@
   summary: "Write, play and visualize scores in MusicScene from Panola strings",
   version: "0.1.0",
   schelp: "MSScore.schelp",
-  dependencies: ["https://github.com/shimpe/panola"],
+  // depends on the Panola quark, pinned to tag 0.4.0
+  dependencies: ["https://github.com/shimpe/panola@0.4.0"],
   license: "GPL",
   copyright: "Stefaan Himpe, 2026"
 )
