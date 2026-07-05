@@ -1,0 +1,241 @@
+TITLE:: MSScore
+summary:: write, play and visualize a score in MusicScene from Panola string(s)
+categories:: Notation, Utils
+related:: Classes/Panola, Classes/Pbind, Classes/Ppar
+
+DESCRIPTION::
+MSScore turns one or more link::Classes/Panola:: strings into a music-notation score in
+link::https://github.com/shimpe/musicscene##MusicScene:: — a Godot addon that engraves notation (via
+Verovio) and plays it in a 2D or 3D scene, driven over OSC. From a single call it builds MEI with
+link::Classes/Panola::'s teletype::scoreAsMEI::, shows the notation, plays the voices (an
+link::Classes/Ppar:: of each voice's teletype::asPbind::), and follows along with a note-accurate cursor.
+
+The voices may be Panola strings (wrapped automatically) or ready link::Classes/Panola:: instances. A long
+score is split into pages that turn automatically as the cursor reaches them. The cursor needs no reply
+round-trip: MusicScene is made addressable (it knows every note's on-page position and staff-system), and
+MSScore simply tells it "the cursor is at beat N" on its own audio clock — so one clock drives both the
+audio and the cursor and they stay in sync.
+
+code::
+(
+~score = MSScore(
+    voices: [ "c5_4 e5 g5 c6", "<c4_4 e4 g4> <c4_4 e4 g4> r_4 <b3_4 d4 g4>", "c3_2 g3_2" ],
+    clefs:  [\treble, \treble, \bass],
+    meter: "4/4", key: \Cmajor, braces: [[2,3]], tempo: 84, space: "2d", scale: 0.9
+);
+)
+~score.play;   // display the notation, play the voices, follow with the cursor
+~score.stop;   // stop, free synths, clear
+::
+
+Requires the link::Classes/Panola:: quark, and a running MusicScene instance (with Verovio working —
+teletype::pip install verovio::). Set strong::space:: to match the project's musicscene/space setting.
+
+
+
+CLASSMETHODS::
+
+METHOD:: new
+create a score from Panola voice(s) and score preferences
+
+ARGUMENT:: voices
+an Array of Panola strings (wrapped automatically) or Panola instances, one per staff (top first)
+
+ARGUMENT:: clefs
+an Array of clef symbols, one per staff (default: all \treble)
+
+ARGUMENT:: meter
+time signature String, e.g. "4/4"
+
+ARGUMENT:: key
+key Symbol, e.g. \Cmajor, \Dminor, \CsharpMinor
+
+ARGUMENT:: braces
+an Array of [firstStaff, lastStaff] 1-based ranges to brace together (e.g. a piano grand staff)
+
+ARGUMENT:: tempo
+tempo in beats (quarter notes) per minute
+
+ARGUMENT:: instruments
+an Array of SynthDef names, one per staff (default: all \default)
+
+ARGUMENT:: id
+the MusicScene object id for the score
+
+ARGUMENT:: space
+"2d" or "3d" — match the project's musicscene/space setting
+
+ARGUMENT:: scale
+on-screen size of the score (default: 2.5 in "3d", 0.7 in "2d")
+
+ARGUMENT:: showDelay
+seconds to let the notation render before playback starts
+
+ARGUMENT:: paginate
+true (default) to split a long score into auto-turning pages
+
+ARGUMENT:: pageHeight
+Verovio page height in units (smaller = fewer systems per page = more pages)
+
+ARGUMENT:: host
+the MusicScene OSC host (default: "127.0.0.1")
+
+ARGUMENT:: listenPort
+the MusicScene OSC listen port (default: 7400)
+
+returns:: a new MSScore
+
+INSTANCEMETHODS::
+
+METHOD:: voices
+the score's voices, one per staff (top to bottom), as Panola instances
+
+returns:: an Array of Panola
+METHOD:: clefs
+the clef of each staff
+
+returns:: an Array of clef symbols (\treble \bass \alto \tenor)
+METHOD:: meter
+the time signature
+
+returns:: a String, e.g. "4/4"
+METHOD:: key
+the key signature
+
+returns:: a key Symbol, e.g. \Cmajor
+METHOD:: braces
+1-based [firstStaff, lastStaff] ranges braced together (e.g. a piano grand staff)
+
+returns:: an Array of [Integer, Integer] pairs, or nil
+METHOD:: tempo
+the tempo in beats (quarter notes) per minute
+
+returns:: a Number
+METHOD:: id
+the MusicScene object id under which the score is created
+
+returns:: a String
+METHOD:: space
+the scene dimensionality, matching the project's musicscene/space setting
+
+returns:: "2d" or "3d"
+METHOD:: instruments
+the SynthDef name to play each staff with
+
+returns:: an Array of Symbols
+METHOD:: scale
+the on-screen size of the score (defaults to 2.5 in "3d", 0.7 in "2d")
+
+returns:: a Number
+METHOD:: totalBeats
+the length of the longest voice, in beats
+
+returns:: a Number
+METHOD:: showDelay
+seconds to let the notation render before playback starts
+
+returns:: a Number
+METHOD:: paginate
+whether a long score is split into auto-turning pages
+
+returns:: a Boolean
+METHOD:: pageHeight
+Verovio page height in units when paginating (smaller = fewer systems per page = more pages)
+
+returns:: a Number
+METHOD:: engine
+the OSC connection to MusicScene
+
+returns:: a NetAddr
+METHOD:: clock
+the TempoClock driving both the audio and the cursor (nil when stopped)
+
+returns:: a TempoClock or nil
+METHOD:: player
+the running Ppar player of the voices (nil until playing)
+
+returns:: an EventStreamPlayer or nil
+METHOD:: cursorRoutine
+the routine that drives the follow cursor over OSC (nil until playing)
+
+returns:: a Routine or nil
+METHOD:: init
+initialize a new MSScore (called by *new); wraps plain strings into Panola instances and applies the defaults
+
+ARGUMENT:: v
+the voices (Panola strings or instances)
+
+ARGUMENT:: cl
+the clefs (or nil)
+
+ARGUMENT:: m
+the meter String
+
+ARGUMENT:: k
+the key Symbol
+
+ARGUMENT:: br
+the brace ranges (or nil)
+
+ARGUMENT:: t
+the tempo
+
+ARGUMENT:: instr
+the instrument SynthDef names (or nil)
+
+ARGUMENT:: i
+the MusicScene object id
+
+ARGUMENT:: sp
+the space ("2d"/"3d")
+
+ARGUMENT:: sc
+the scale (or nil for the space-dependent default)
+
+ARGUMENT:: sd
+the show delay in seconds
+
+ARGUMENT:: pg
+paginate flag
+
+ARGUMENT:: ph
+page height
+
+ARGUMENT:: host
+the OSC host
+
+ARGUMENT:: lport
+the OSC listen port
+
+returns:: this instance of MSScore
+
+METHOD:: mei
+the MEI notation document for this score, built with link::Classes/Panola#*scoreAsMEI::. Usable on its own (e.g. to write to a .mei file for any MEI renderer).
+
+returns:: an MEI document (a String)
+METHOD:: show
+display the notation in MusicScene, made addressable so note positions are known for the follow cursor. Non-blocking (sends the OSC setup from a Routine).
+
+returns:: this instance of MSScore
+
+METHOD:: play
+show the score, then (after showDelay) play the voices and follow along with a note-accurate cursor. Non-blocking.
+
+returns:: this instance of MSScore
+
+METHOD:: stop
+stop playback and the cursor, free all synths on the default server, and clear the scene
+
+returns:: this instance of MSScore
+
+METHOD:: pr_startPlayback
+(private) start the Ppar playback and the follow-cursor routine on one shared TempoClock, so audio and cursor stay in sync. The cursor sends its position (in whole notes = beats/4) to MusicScene, which maps it to the current note's on-page position and staff-system.
+
+returns:: this instance of MSScore
+
+
+EXAMPLES::
+
+code::
+(FIXME add some example code)
+::

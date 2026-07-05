@@ -1,0 +1,289 @@
+/*
+[general]
+title = "MSScore"
+summary = "write, play and visualize a score in MusicScene from Panola string(s)"
+categories = "Notation, Utils"
+related = "Classes/Panola, Classes/Pbind, Classes/Ppar"
+description = '''
+MSScore turns one or more link::Classes/Panola:: strings into a music-notation score in
+link::https://github.com/shimpe/musicscene##MusicScene:: — a Godot addon that engraves notation (via
+Verovio) and plays it in a 2D or 3D scene, driven over OSC. From a single call it builds MEI with
+link::Classes/Panola::'s teletype::scoreAsMEI::, shows the notation, plays the voices (an
+link::Classes/Ppar:: of each voice's teletype::asPbind::), and follows along with a note-accurate cursor.
+
+The voices may be Panola strings (wrapped automatically) or ready link::Classes/Panola:: instances. A long
+score is split into pages that turn automatically as the cursor reaches them. The cursor needs no reply
+round-trip: MusicScene is made addressable (it knows every note's on-page position and staff-system), and
+MSScore simply tells it "the cursor is at beat N" on its own audio clock — so one clock drives both the
+audio and the cursor and they stay in sync.
+
+code::
+(
+~score = MSScore(
+    voices: [ "c5_4 e5 g5 c6", "<c4_4 e4 g4> <c4_4 e4 g4> r_4 <b3_4 d4 g4>", "c3_2 g3_2" ],
+    clefs:  [\treble, \treble, \bass],
+    meter: "4/4", key: \Cmajor, braces: [[2,3]], tempo: 84, space: "2d", scale: 0.9
+);
+)
+~score.play;   // display the notation, play the voices, follow with the cursor
+~score.stop;   // stop, free synths, clear
+::
+
+Requires the link::Classes/Panola:: quark, and a running MusicScene instance (with Verovio working —
+teletype::pip install verovio::). Set strong::space:: to match the project's musicscene/space setting.
+'''
+*/
+MSScore {
+	/*
+	[method.voices]
+	description = "the score's voices, one per staff (top to bottom), as Panola instances"
+	[method.voices.returns]
+	what = "an Array of Panola"
+	*/
+	var <voices;
+	/*
+	[method.clefs]
+	description = "the clef of each staff"
+	[method.clefs.returns]
+	what = "an Array of clef symbols (\\treble \\bass \\alto \\tenor)"
+	*/
+	var <clefs;
+	/*
+	[method.meter]
+	description = "the time signature"
+	[method.meter.returns]
+	what = "a String, e.g. \"4/4\""
+	*/
+	var <meter;
+	/*
+	[method.key]
+	description = "the key signature"
+	[method.key.returns]
+	what = "a key Symbol, e.g. \\Cmajor"
+	*/
+	var <key;
+	/*
+	[method.braces]
+	description = "1-based [firstStaff, lastStaff] ranges braced together (e.g. a piano grand staff)"
+	[method.braces.returns]
+	what = "an Array of [Integer, Integer] pairs, or nil"
+	*/
+	var <braces;
+	/*
+	[method.tempo]
+	description = "the tempo in beats (quarter notes) per minute"
+	[method.tempo.returns]
+	what = "a Number"
+	*/
+	var <tempo;
+	/*
+	[method.id]
+	description = "the MusicScene object id under which the score is created"
+	[method.id.returns]
+	what = "a String"
+	*/
+	var <id;
+	/*
+	[method.space]
+	description = "the scene dimensionality, matching the project's musicscene/space setting"
+	[method.space.returns]
+	what = "\"2d\" or \"3d\""
+	*/
+	var <space;
+	/*
+	[method.instruments]
+	description = "the SynthDef name to play each staff with"
+	[method.instruments.returns]
+	what = "an Array of Symbols"
+	*/
+	var <instruments;
+	/*
+	[method.scale]
+	description = "the on-screen size of the score (defaults to 2.5 in \"3d\", 0.7 in \"2d\")"
+	[method.scale.returns]
+	what = "a Number"
+	*/
+	var <scale;
+	/*
+	[method.totalBeats]
+	description = "the length of the longest voice, in beats"
+	[method.totalBeats.returns]
+	what = "a Number"
+	*/
+	var <totalBeats;
+	/*
+	[method.showDelay]
+	description = "seconds to let the notation render before playback starts"
+	[method.showDelay.returns]
+	what = "a Number"
+	*/
+	var <showDelay;
+	/*
+	[method.paginate]
+	description = "whether a long score is split into auto-turning pages"
+	[method.paginate.returns]
+	what = "a Boolean"
+	*/
+	var <paginate;
+	/*
+	[method.pageHeight]
+	description = "Verovio page height in units when paginating (smaller = fewer systems per page = more pages)"
+	[method.pageHeight.returns]
+	what = "a Number"
+	*/
+	var <pageHeight;
+	// --- runtime state (set while playing) ---
+	/*
+	[method.engine]
+	description = "the OSC connection to MusicScene"
+	[method.engine.returns]
+	what = "a NetAddr"
+	*/
+	var <engine;
+	/*
+	[method.clock]
+	description = "the TempoClock driving both the audio and the cursor (nil when stopped)"
+	[method.clock.returns]
+	what = "a TempoClock or nil"
+	*/
+	var <clock;
+	/*
+	[method.player]
+	description = "the running Ppar player of the voices (nil until playing)"
+	[method.player.returns]
+	what = "an EventStreamPlayer or nil"
+	*/
+	var <player;
+	/*
+	[method.cursorRoutine]
+	description = "the routine that drives the follow cursor over OSC (nil until playing)"
+	[method.cursorRoutine.returns]
+	what = "a Routine or nil"
+	*/
+	var <cursorRoutine;
+
+	/*
+	[classmethod.new]
+	description = "create a score from Panola voice(s) and score preferences"
+	[classmethod.new.args]
+	voices = "an Array of Panola strings (wrapped automatically) or Panola instances, one per staff (top first)"
+	clefs = "an Array of clef symbols, one per staff (default: all \\treble)"
+	meter = "time signature String, e.g. \"4/4\""
+	key = "key Symbol, e.g. \\Cmajor, \\Dminor, \\CsharpMinor"
+	braces = "an Array of [firstStaff, lastStaff] 1-based ranges to brace together (e.g. a piano grand staff)"
+	tempo = "tempo in beats (quarter notes) per minute"
+	instruments = "an Array of SynthDef names, one per staff (default: all \\default)"
+	id = "the MusicScene object id for the score"
+	space = "\"2d\" or \"3d\" — match the project's musicscene/space setting"
+	scale = "on-screen size of the score (default: 2.5 in \"3d\", 0.7 in \"2d\")"
+	showDelay = "seconds to let the notation render before playback starts"
+	paginate = "true (default) to split a long score into auto-turning pages"
+	pageHeight = "Verovio page height in units (smaller = fewer systems per page = more pages)"
+	host = "the MusicScene OSC host (default: \"127.0.0.1\")"
+	listenPort = "the MusicScene OSC listen port (default: 7400)"
+	[classmethod.new.returns]
+	what = "a new MSScore"
+	*/
+	*new { | voices, clefs, meter = "4/4", key = \Cmajor, braces, tempo = 84, instruments,
+		id = "score", space = "2d", scale, showDelay = 1.0, paginate = true, pageHeight = 1200,
+		host = "127.0.0.1", listenPort = 7400 |
+		^super.new.init(voices, clefs, meter, key, braces, tempo, instruments, id, space, scale, showDelay, paginate, pageHeight, host, listenPort);
+	}
+
+	/*
+	[method.init]
+	description = "initialize a new MSScore (called by *new); wraps plain strings into Panola instances and applies the defaults"
+	[method.init.args]
+	v = "the voices (Panola strings or instances)"
+	cl = "the clefs (or nil)"
+	m = "the meter String"
+	k = "the key Symbol"
+	br = "the brace ranges (or nil)"
+	t = "the tempo"
+	instr = "the instrument SynthDef names (or nil)"
+	i = "the MusicScene object id"
+	sp = "the space (\"2d\"/\"3d\")"
+	sc = "the scale (or nil for the space-dependent default)"
+	sd = "the show delay in seconds"
+	pg = "paginate flag"
+	ph = "page height"
+	host = "the OSC host"
+	lport = "the OSC listen port"
+	*/
+	init { | v, cl, m, k, br, t, instr, i, sp, sc, sd, pg, ph, host, lport |
+		voices = v.collect({ |x| x.isKindOf(Panola).if({ x }, { Panola(x) }) });
+		clefs = cl ? voices.collect({ \treble });
+		meter = m; key = k; braces = br; tempo = t; id = i; space = sp;
+		instruments = instr ? voices.collect({ \default });
+		scale = sc ? (sp == "3d").if({ 2.5 }, { 0.7 });   // pass `scale:` to enlarge/shrink the score
+		showDelay = sd;                                    // seconds to let the notation render before playing
+		paginate = pg; pageHeight = ph;                    // split long scores into pages that turn automatically
+		engine = NetAddr(host, lport);
+		totalBeats = voices.collect({ |p| p.totalDuration }).maxItem;
+	}
+
+	/*
+	[method.mei]
+	description = "the MEI notation document for this score, built with link::Classes/Panola#*scoreAsMEI::. Usable on its own (e.g. to write to a .mei file for any MEI renderer)."
+	[method.mei.returns]
+	what = "an MEI document (a String)"
+	*/
+	mei { ^Panola.scoreAsMEI(voices, meter, key, clefs, braces) }
+
+	/*
+	[method.show]
+	description = "display the notation in MusicScene, made addressable so note positions are known for the follow cursor. Non-blocking (sends the OSC setup from a Routine)."
+	*/
+	show {
+		var m = this.mei;
+		Routine({
+			var snd = { |... a| engine.sendMsg(*a); 0.02.wait };
+			snd.("/ms/scene/" ++ id, "new", "notation");
+			snd.("/ms/scene/" ++ id, "background", "white");
+			snd.("/ms/scene/" ++ id, "scale", scale);
+			if (space == "3d") { snd.("/ms/scene/" ++ id, "pos", 0.0, 0.0, 0.0) } { snd.("/ms/scene/" ++ id, "pos", 0.0, 0.0) };
+			snd.("/ms/scene/" ++ id ++ "/cursor", "show", 1);
+			snd.("/ms/scene/" ++ id, "paginate", paginate.if({ 1 }, { 0 }), pageHeight);
+			snd.("/ms/scene/" ++ id, "addressable", 1);
+			snd.("/ms/scene/" ++ id, "notationData", "mei", m);
+		}).play;
+	}
+
+	/*
+	[method.play]
+	description = "show the score, then (after showDelay) play the voices and follow along with a note-accurate cursor. Non-blocking."
+	*/
+	play {
+		this.show;
+		Routine({ showDelay.wait; this.pr_startPlayback; }).play;
+	}
+
+	/*
+	[method.stop]
+	description = "stop playback and the cursor, free all synths on the default server, and clear the scene"
+	*/
+	stop {
+		clock.notNil.if({ clock.stop; clock = nil });
+		player.notNil.if({ player.stop });
+		cursorRoutine.notNil.if({ cursorRoutine.stop });
+		Server.default.freeAll;
+		engine.sendMsg("/ms/scene", "clear");
+	}
+
+	/*
+	[method.pr_startPlayback]
+	description = "(private) start the Ppar playback and the follow-cursor routine on one shared TempoClock, so audio and cursor stay in sync. The cursor sends its position (in whole notes = beats/4) to MusicScene, which maps it to the current note's on-page position and staff-system."
+	*/
+	pr_startPlayback {
+		var startBeat;
+		clock = TempoClock(tempo / 60);
+		player = Ppar(voices.collect({ |p, i| p.asPbind(instruments[i], include_tempo: false) })).play(clock, quant: 0);
+		startBeat = clock.beats;
+		cursorRoutine = Routine({
+			while { (clock.beats - startBeat) <= (totalBeats + 0.5) } {
+				engine.sendMsg("/ms/scene/" ++ id ++ "/cursor", "at", (clock.beats - startBeat) / 4);
+				0.0625.wait;   // ~16 cursor updates per beat, for smooth motion
+			};
+		}).play(clock, quant: 0);
+	}
+}
