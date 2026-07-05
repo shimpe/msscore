@@ -43,6 +43,11 @@ teletype::staccatissimo:: (stacciss), teletype::accent:: (acc), teletype::tenuto
 teletype::marcato:: (marc), teletype::spiccato:: (spicc). Example:
 teletype::c5_4@art[stacc:on] d5 e5 f5@art[stacc:off] g5@art^accent^ a5::.
 
+strong::Slurs:: - teletype::@slur^start^:: opens a slur and teletype::@slur^end^:: closes it (both notes
+are under the arc); teletype::@slur^endstart^:: closes the open slur and opens the next at the same note
+(chained phrases). One slur at a time. Example:
+teletype::c5_4@slur^start^ d5 e5@slur^endstart^ f5 g5@slur^end^ a5::.
+
 Requires the link::Classes/Panola:: quark, and a running MusicScene instance (with Verovio working —
 teletype::pip install verovio::). Set strong::space:: to match the project's musicscene/space setting.
 
