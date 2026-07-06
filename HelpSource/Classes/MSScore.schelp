@@ -283,7 +283,7 @@ the OSC listen port
 returns:: this instance of MSScore
 
 METHOD:: pr_validate
-(private) check that the per-voice arrays are parallel to voices and that \midi voices have a usable midiOut; clamp out-of-range MIDI channels with a warning
+(private) check that the per-voice arrays are parallel to voices, that each backend is \internal or \midi, and that \midi voices have a usable midiOut; clamp out-of-range MIDI channels with a warning
 
 returns:: this instance of MSScore
 

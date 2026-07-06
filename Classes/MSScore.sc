@@ -299,7 +299,7 @@ MSScore {
 
 	/*
 	[method.pr_validate]
-	description = "(private) check that the per-voice arrays are parallel to voices and that \\midi voices have a usable midiOut; clamp out-of-range MIDI channels with a warning"
+	description = "(private) check that the per-voice arrays are parallel to voices, that each backend is \\internal or \\midi, and that \\midi voices have a usable midiOut; clamp out-of-range MIDI channels with a warning"
 	*/
 	pr_validate {
 		var n = voices.size;
@@ -307,6 +307,11 @@ MSScore {
 		 ["channels", channels], ["wrap", wrap]].do({ |pair|
 			(pair[1].size != n).if({
 				Error("MSScore: '" ++ pair[0] ++ "' must have one entry per voice (" ++ n ++ "), got " ++ pair[1].size ++ ".").throw;
+			});
+		});
+		backends.do({ |b, ix|
+			(#[\internal, \midi].includes(b).not).if({
+				Error("MSScore: backends[" ++ ix ++ "] must be \\internal or \\midi, got " ++ b ++ ".").throw;
 			});
 		});
 		if (backends.includes(\midi)) {
