@@ -363,8 +363,29 @@ MSScore {
 		clock.notNil.if({ clock.stop; clock = nil });
 		player.notNil.if({ player.stop });
 		cursorRoutine.notNil.if({ cursorRoutine.stop });
+		this.pr_allNotesOff;
 		Server.default.freeAll;
 		engine.sendMsg("/ms/scene", "clear");
+	}
+
+	/*
+	[method.pr_allNotesOff]
+	description = "(private) send an all-notes-off (CC 123) to each \\midi voice's device and channel, so stopping mid-note leaves no hanging hardware notes; each device+channel is sent once"
+	*/
+	pr_allNotesOff {
+		var done = [];
+		backends.do({ | b, i |
+			var mo, ch, k;
+			if (b == \midi) {
+				mo = this.pr_midiOutFor(i);
+				ch = channels[i];
+				k = [mo, ch];
+				if (mo.notNil and: { done.includes(k).not }) {
+					mo.control(ch, 123, 0);   // CC 123 = All Notes Off
+					done = done.add(k);
+				};
+			};
+		});
 	}
 
 	/*
