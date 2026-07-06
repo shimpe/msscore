@@ -368,13 +368,39 @@ MSScore {
 	}
 
 	/*
+	[method.pr_midiOutFor]
+	description = "(private) the MIDIOut for voice i: the shared midiOut, or midiOut[i] when midiOut is a per-voice Array"
+	[method.pr_midiOutFor.args]
+	i = "the voice index"
+	[method.pr_midiOutFor.returns]
+	what = "a MIDIOut (or nil)"
+	*/
+	pr_midiOutFor { | i | ^midiOut.isArray.if({ midiOut[i] }, { midiOut }); }
+
+	/*
+	[method.pr_voicePatterns]
+	description = "(private) the pattern for each voice: asPbind for an \\internal voice, asMidiPbind for a \\midi voice, then passed through this voice's wrap function if one is set"
+	[method.pr_voicePatterns.returns]
+	what = "an Array of patterns (one per voice), ready for a Ppar"
+	*/
+	pr_voicePatterns {
+		^voices.collect({ | p, i |
+			var pat = (backends[i] == \midi).if(
+				{ p.asMidiPbind(this.pr_midiOutFor(i), channels[i], include_tempo: false) },
+				{ p.asPbind(instruments[i], include_tempo: false) }
+			);
+			wrap[i].notNil.if({ wrap[i].value(pat, i) }, { pat });
+		});
+	}
+
+	/*
 	[method.pr_startPlayback]
 	description = "(private) start the Ppar playback and the follow-cursor routine on one shared TempoClock, so audio and cursor stay in sync. The cursor sends its position (in whole notes = beats/4) to MusicScene, which maps it to the current note's on-page position and staff-system."
 	*/
 	pr_startPlayback {
 		var startBeat;
 		clock = TempoClock(tempo / 60);
-		player = Ppar(voices.collect({ |p, i| p.asPbind(instruments[i], include_tempo: false) })).play(clock, quant: 0);
+		player = Ppar(this.pr_voicePatterns).play(clock, quant: 0);
 		startBeat = clock.beats;
 		cursorRoutine = Routine({
 			while { (clock.beats - startBeat) <= (totalBeats + 0.5) } {
