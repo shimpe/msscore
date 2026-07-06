@@ -370,7 +370,7 @@ MSScore {
 
 	/*
 	[method.pr_allNotesOff]
-	description = "(private) send an all-notes-off (CC 123) to each \\midi voice's device and channel, so stopping mid-note leaves no hanging hardware notes; each device+channel is sent once"
+	description = "(private) send a MIDI All Notes Off (CC 123) to each \\midi voice's device and channel when stopping, so notes still sounding are released; each device+channel is sent once. (CC 123 does not release notes held by a sustain pedal.)"
 	*/
 	pr_allNotesOff {
 		var done = [];
@@ -380,7 +380,7 @@ MSScore {
 				mo = this.pr_midiOutFor(i);
 				ch = channels[i];
 				k = [mo, ch];
-				if (mo.notNil and: { done.includes(k).not }) {
+				if (mo.notNil and: { done.any({ | x | x == k }).not }) {
 					mo.control(ch, 123, 0);   // CC 123 = All Notes Off
 					done = done.add(k);
 				};
