@@ -49,6 +49,19 @@ are under the arc); teletype::@slur^endstart^:: closes the open slur and opens t
 (chained phrases). One slur at a time. Example:
 teletype::c5_4@slur^start^ d5 e5@slur^endstart^ f5 g5@slur^end^ a5::.
 
+strong::MIDI / hardware synths:: - by default every voice plays on a SuperCollider synth (backend
+teletype::\internal::). To play a voice on an external/hardware synth instead, set strong::backends:: to
+teletype::\midi:: for that voice and pass strong::midiOut:: - either a single link::Classes/MIDIOut::
+shared by all teletype::\midi:: voices, or an Array of MIDIOut (one per voice). strong::channels:: gives
+each voice a MIDI channel (default: the voice's index, so one multitimbral device gets a distinct channel
+per staff); teletype::instruments:: applies only to teletype::\internal:: voices. For per-note MIDI
+control (CC, sustain pedal, program change) pass strong::wrap::, a teletype::{ |pattern, i| newPattern }::
+per voice applied to the built pattern - e.g.
+teletype::{ |pat, i| Pbindf(pat, \handle, Pfunc { |ev| midiOut.control(ev[\chan], 64, (ev[\ped] ? 0).asInteger) }) }::
+turns a teletype::@ped:: property into a sustain-pedal controller. You create and own the MIDIOut
+(teletype::MIDIClient.init; MIDIOut.newByName(...)::); MSScore never opens devices. The follow cursor works
+the same over MIDI.
+
 Requires the link::Classes/Panola:: quark, and a running MusicScene instance (with Verovio working —
 teletype::pip install verovio::). Set strong::space:: to match the project's musicscene/space setting.
 '''

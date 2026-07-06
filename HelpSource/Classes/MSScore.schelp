@@ -48,6 +48,19 @@ are under the arc); teletype::@slur^endstart^:: closes the open slur and opens t
 (chained phrases). One slur at a time. Example:
 teletype::c5_4@slur^start^ d5 e5@slur^endstart^ f5 g5@slur^end^ a5::.
 
+strong::MIDI / hardware synths:: - by default every voice plays on a SuperCollider synth (backend
+teletype::\internal::). To play a voice on an external/hardware synth instead, set strong::backends:: to
+teletype::\midi:: for that voice and pass strong::midiOut:: - either a single link::Classes/MIDIOut::
+shared by all teletype::\midi:: voices, or an Array of MIDIOut (one per voice). strong::channels:: gives
+each voice a MIDI channel (default: the voice's index, so one multitimbral device gets a distinct channel
+per staff); teletype::instruments:: applies only to teletype::\internal:: voices. For per-note MIDI
+control (CC, sustain pedal, program change) pass strong::wrap::, a teletype::{ |pattern, i| newPattern }::
+per voice applied to the built pattern - e.g.
+teletype::{ |pat, i| Pbindf(pat, \handle, Pfunc { |ev| midiOut.control(ev[\chan], 64, (ev[\ped] ? 0).asInteger) }) }::
+turns a teletype::@ped:: property into a sustain-pedal controller. You create and own the MIDIOut
+(teletype::MIDIClient.init; MIDIOut.newByName(...)::); MSScore never opens devices. The follow cursor works
+the same over MIDI.
+
 Requires the link::Classes/Panola:: quark, and a running MusicScene instance (with Verovio working —
 teletype::pip install verovio::). Set strong::space:: to match the project's musicscene/space setting.
 
@@ -77,7 +90,19 @@ ARGUMENT:: tempo
 tempo in beats (quarter notes) per minute
 
 ARGUMENT:: instruments
-an Array of SynthDef names, one per staff (default: all \default)
+an Array of SynthDef names, one per staff, for \internal voices (default: all \default)
+
+ARGUMENT:: backends
+an Array of \internal (SuperCollider synth) or \midi (external/hardware synth), one per voice (default: all \internal)
+
+ARGUMENT:: midiOut
+a MIDIOut shared by all \midi voices, or an Array of MIDIOut (one per voice); required if any voice is \midi
+
+ARGUMENT:: channels
+an Array of MIDI channels (0..15), one per voice, used only by \midi voices (default: each voice's index)
+
+ARGUMENT:: wrap
+an Array whose entries are nil or a Function { |pattern, i| newPattern } applied to a voice's built pattern - use it to add per-note MIDI control (CC / sustain pedal / program change); default: all nil
 
 ARGUMENT:: id
 the MusicScene object id for the score
@@ -143,6 +168,22 @@ METHOD:: instruments
 the SynthDef name to play each staff with
 
 returns:: an Array of Symbols
+METHOD:: backends
+per-voice playback backend: \internal (SuperCollider synth) or \midi (external/hardware synth)
+
+returns:: an Array of Symbols (\internal / \midi)
+METHOD:: midiOut
+the MIDIOut(s) used by \midi voices: a single MIDIOut shared by all of them, or an Array of MIDIOut (one per voice)
+
+returns:: a MIDIOut, an Array of MIDIOut, or nil
+METHOD:: channels
+per-voice MIDI channel (0..15), used only by \midi voices
+
+returns:: an Array of Integers
+METHOD:: wrap
+per-voice pattern transform applied after the base pattern is built: nil, or a Function { |pattern, voiceIndex| newPattern }. Use it to add per-note MIDI control (CC / sustain pedal / program change) while keeping the shared clock and follow cursor.
+
+returns:: an Array whose entries are nil or a Function
 METHOD:: scale
 the on-screen size of the score (defaults to 2.5 in "3d", 0.7 in "2d")
 
@@ -203,6 +244,18 @@ the tempo
 ARGUMENT:: instr
 the instrument SynthDef names (or nil)
 
+ARGUMENT:: bk
+the backends (\internal / \midi) per voice (or nil)
+
+ARGUMENT:: mo
+the midiOut: a MIDIOut, an Array of MIDIOut, or nil
+
+ARGUMENT:: ch
+the MIDI channels per voice (or nil)
+
+ARGUMENT:: wr
+the per-voice wrap Functions (or nil)
+
 ARGUMENT:: i
 the MusicScene object id
 
@@ -229,6 +282,11 @@ the OSC listen port
 
 returns:: this instance of MSScore
 
+METHOD:: pr_validate
+(private) check that the per-voice arrays are parallel to voices and that \midi voices have a usable midiOut; clamp out-of-range MIDI channels with a warning
+
+returns:: this instance of MSScore
+
 METHOD:: mei
 the MEI notation document for this score, built with link::Classes/Panola#*scoreAsMEI::. Usable on its own (e.g. to write to a .mei file for any MEI renderer).
 
@@ -248,6 +306,22 @@ stop playback and the cursor, free all synths on the default server, and clear t
 
 returns:: this instance of MSScore
 
+METHOD:: pr_allNotesOff
+(private) send a MIDI All Notes Off (CC 123) to each \midi voice's device and channel when stopping, so notes still sounding are released; each device+channel is sent once. (CC 123 does not release notes held by a sustain pedal.)
+
+returns:: this instance of MSScore
+
+METHOD:: pr_midiOutFor
+(private) the MIDIOut for voice i: the shared midiOut, or midiOut[i] when midiOut is a per-voice Array
+
+ARGUMENT:: i
+the voice index
+
+returns:: a MIDIOut (or nil)
+METHOD:: pr_voicePatterns
+(private) the pattern for each voice: asPbind for an \internal voice, asMidiPbind for a \midi voice, then passed through this voice's wrap function if one is set
+
+returns:: an Array of patterns (one per voice), ready for a Ppar
 METHOD:: pr_startPlayback
 (private) start the Ppar playback and the follow-cursor routine on one shared TempoClock, so audio and cursor stay in sync. The cursor sends its position (in whole notes = beats/4) to MusicScene, which maps it to the current note's on-page position and staff-system.
 
