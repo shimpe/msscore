@@ -118,6 +118,34 @@ MSScore {
 	*/
 	var <instruments;
 	/*
+	[method.backends]
+	description = "per-voice playback backend: \\internal (SuperCollider synth) or \\midi (external/hardware synth)"
+	[method.backends.returns]
+	what = "an Array of Symbols (\\internal / \\midi)"
+	*/
+	var <backends;
+	/*
+	[method.midiOut]
+	description = "the MIDIOut(s) used by \\midi voices: a single MIDIOut shared by all of them, or an Array of MIDIOut (one per voice)"
+	[method.midiOut.returns]
+	what = "a MIDIOut, an Array of MIDIOut, or nil"
+	*/
+	var <midiOut;
+	/*
+	[method.channels]
+	description = "per-voice MIDI channel (0..15), used only by \\midi voices"
+	[method.channels.returns]
+	what = "an Array of Integers"
+	*/
+	var <channels;
+	/*
+	[method.wrap]
+	description = "per-voice pattern transform applied after the base pattern is built: nil, or a Function { |pattern, voiceIndex| newPattern }. Use it to add per-note MIDI control (CC / sustain pedal / program change) while keeping the shared clock and follow cursor."
+	[method.wrap.returns]
+	what = "an Array whose entries are nil or a Function"
+	*/
+	var <wrap;
+	/*
 	[method.scale]
 	description = "the on-screen size of the score (defaults to 2.5 in \"3d\", 0.7 in \"2d\")"
 	[method.scale.returns]
@@ -205,9 +233,10 @@ MSScore {
 	what = "a new MSScore"
 	*/
 	*new { | voices, clefs, meter = "4/4", key = \Cmajor, braces, tempo = 84, instruments,
+		backends, midiOut, channels, wrap,
 		id = "score", space = "2d", scale, showDelay = 1.0, paginate = true, pageHeight = 1200,
 		host = "127.0.0.1", listenPort = 7400 |
-		^super.new.init(voices, clefs, meter, key, braces, tempo, instruments, id, space, scale, showDelay, paginate, pageHeight, host, listenPort);
+		^super.new.init(voices, clefs, meter, key, braces, tempo, instruments, backends, midiOut, channels, wrap, id, space, scale, showDelay, paginate, pageHeight, host, listenPort);
 	}
 
 	/*
@@ -230,16 +259,56 @@ MSScore {
 	host = "the OSC host"
 	lport = "the OSC listen port"
 	*/
-	init { | v, cl, m, k, br, t, instr, i, sp, sc, sd, pg, ph, host, lport |
+	init { | v, cl, m, k, br, t, instr, bk, mo, ch, wr, i, sp, sc, sd, pg, ph, host, lport |
 		voices = v.collect({ |x| x.isKindOf(Panola).if({ x }, { Panola(x) }) });
 		clefs = cl ? voices.collect({ \treble });
 		meter = m; key = k; braces = br; tempo = t; id = i; space = sp;
 		instruments = instr ? voices.collect({ \default });
+		backends = bk ? voices.collect({ \internal });
+		channels = ch ? voices.collect({ |x, ix| ix });   // default: each voice on its own MIDI channel
+		wrap = wr ? voices.collect({ nil });
+		midiOut = mo;
 		scale = sc ? (sp == "3d").if({ 2.5 }, { 0.7 });   // pass `scale:` to enlarge/shrink the score
 		showDelay = sd;                                    // seconds to let the notation render before playing
 		paginate = pg; pageHeight = ph;                    // split long scores into pages that turn automatically
 		engine = NetAddr(host, lport);
 		totalBeats = voices.collect({ |p| p.totalDuration }).maxItem;
+		this.pr_validate;
+	}
+
+	/*
+	[method.pr_validate]
+	description = "(private) check that the per-voice arrays are parallel to voices and that \\midi voices have a usable midiOut; clamp out-of-range MIDI channels with a warning"
+	*/
+	pr_validate {
+		var n = voices.size;
+		[["clefs", clefs], ["instruments", instruments], ["backends", backends],
+		 ["channels", channels], ["wrap", wrap]].do({ |pair|
+			(pair[1].size != n).if({
+				Error("MSScore: '" ++ pair[0] ++ "' must have one entry per voice (" ++ n ++ "), got " ++ pair[1].size ++ ".").throw;
+			});
+		});
+		if (backends.includes(\midi)) {
+			midiOut.isNil.if({
+				Error("MSScore: a \\midi voice needs a midiOut (a MIDIOut, or an Array of MIDIOut).").throw;
+			});
+			midiOut.isArray.if({
+				(midiOut.size != n).if({
+					Error("MSScore: midiOut Array must have one entry per voice (" ++ n ++ "), got " ++ midiOut.size ++ ".").throw;
+				});
+				backends.do({ |b, ix|
+					(b == \midi and: { midiOut[ix].isNil }).if({
+						Error("MSScore: midiOut[" ++ ix ++ "] is nil but voice " ++ ix ++ " is \\midi.").throw;
+					});
+				});
+			});
+			channels = channels.collect({ |c, ix|
+				(backends[ix] == \midi and: { (c < 0) or: { c > 15 } }).if({
+					warn("MSScore: MIDI channel " ++ c ++ " for voice " ++ ix ++ " out of 0..15; clamping.");
+					c.clip(0, 15);
+				}, { c });
+			});
+		};
 	}
 
 	/*
