@@ -193,6 +193,13 @@ MSScore {
 	what = "a Number"
 	*/
 	var <pageHeight;
+	/*
+	[method.showCursor]
+	description = "whether the playback cursor line is drawn; when false the score still auto-turns pages, just without a visible cursor"
+	[method.showCursor.returns]
+	what = "a Boolean"
+	*/
+	var <showCursor;
 	// --- runtime state (set while playing) ---
 	/*
 	[method.engine]
@@ -244,6 +251,7 @@ MSScore {
 	showDelay = "seconds to let the notation render before playback starts"
 	paginate = "true (default) to split a long score into auto-turning pages"
 	pageHeight = "Verovio page height in units (smaller = fewer systems per page = more pages)"
+	showCursor = "true (default) to draw the playback cursor; false shows the score and still auto-turns pages, but without a visible cursor"
 	host = "the MusicScene OSC host (default: \"127.0.0.1\")"
 	listenPort = "the MusicScene OSC listen port (default: 7400)"
 	[classmethod.new.returns]
@@ -252,8 +260,8 @@ MSScore {
 	*new { | voices, clefs, meter = "4/4", key = \Cmajor, braces, tempo = 84, instruments,
 		backends, midiOut, channels, wrap,
 		id = "score", space = "2d", scale, showDelay = 1.0, paginate = true, pageHeight = 1200,
-		host = "127.0.0.1", listenPort = 7400 |
-		^super.new.init(voices, clefs, meter, key, braces, tempo, instruments, backends, midiOut, channels, wrap, id, space, scale, showDelay, paginate, pageHeight, host, listenPort);
+		showCursor = true, host = "127.0.0.1", listenPort = 7400 |
+		^super.new.init(voices, clefs, meter, key, braces, tempo, instruments, backends, midiOut, channels, wrap, id, space, scale, showDelay, paginate, pageHeight, showCursor, host, listenPort);
 	}
 
 	/*
@@ -277,10 +285,11 @@ MSScore {
 	sd = "the show delay in seconds"
 	pg = "paginate flag"
 	ph = "page height"
+	scr = "showCursor flag"
 	host = "the OSC host"
 	lport = "the OSC listen port"
 	*/
-	init { | v, cl, m, k, br, t, instr, bk, mo, ch, wr, i, sp, sc, sd, pg, ph, host, lport |
+	init { | v, cl, m, k, br, t, instr, bk, mo, ch, wr, i, sp, sc, sd, pg, ph, scr, host, lport |
 		voices = v.collect({ |x| x.isKindOf(Panola).if({ x }, { Panola(x) }) });
 		clefs = cl ? voices.collect({ \treble });
 		meter = m; key = k; braces = br; tempo = t; id = i; space = sp;
@@ -292,6 +301,7 @@ MSScore {
 		scale = sc ? (sp == "3d").if({ 2.5 }, { 0.7 });   // pass `scale:` to enlarge/shrink the score
 		showDelay = sd;                                    // seconds to let the notation render before playing
 		paginate = pg; pageHeight = ph;                    // split long scores into pages that turn automatically
+		showCursor = scr;                                  // draw the playback cursor line (pages still auto-turn if false)
 		engine = NetAddr(host, lport);
 		totalBeats = voices.collect({ |p| p.totalDuration }).maxItem;
 		this.pr_validate;
@@ -357,7 +367,7 @@ MSScore {
 			snd.("/ms/scene/" ++ id, "background", "white");
 			snd.("/ms/scene/" ++ id, "scale", scale);
 			if (space == "3d") { snd.("/ms/scene/" ++ id, "pos", 0.0, 0.0, 0.0) } { snd.("/ms/scene/" ++ id, "pos", 0.0, 0.0) };
-			snd.("/ms/scene/" ++ id ++ "/cursor", "show", 1);
+			snd.("/ms/scene/" ++ id ++ "/cursor", "show", showCursor.if({ 1 }, { 0 }));
 			snd.("/ms/scene/" ++ id, "paginate", paginate.if({ 1 }, { 0 }), pageHeight);
 			snd.("/ms/scene/" ++ id, "addressable", 1);
 			snd.("/ms/scene/" ++ id, "notationData", "mei", m);

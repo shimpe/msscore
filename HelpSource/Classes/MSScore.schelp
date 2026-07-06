@@ -122,6 +122,9 @@ true (default) to split a long score into auto-turning pages
 ARGUMENT:: pageHeight
 Verovio page height in units (smaller = fewer systems per page = more pages)
 
+ARGUMENT:: showCursor
+true (default) to draw the playback cursor; false shows the score and still auto-turns pages, but without a visible cursor
+
 ARGUMENT:: host
 the MusicScene OSC host (default: "127.0.0.1")
 
@@ -204,6 +207,10 @@ METHOD:: pageHeight
 Verovio page height in units when paginating (smaller = fewer systems per page = more pages)
 
 returns:: a Number
+METHOD:: showCursor
+whether the playback cursor line is drawn; when false the score still auto-turns pages, just without a visible cursor
+
+returns:: a Boolean
 METHOD:: engine
 the OSC connection to MusicScene
 
@@ -273,6 +280,9 @@ paginate flag
 
 ARGUMENT:: ph
 page height
+
+ARGUMENT:: scr
+showCursor flag
 
 ARGUMENT:: host
 the OSC host
