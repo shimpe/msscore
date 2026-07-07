@@ -353,7 +353,7 @@ MSScore {
 	[method.mei.returns]
 	what = "an MEI document (a String)"
 	*/
-	mei { ^Panola.scoreAsMEI(voices, meter, key, clefs, braces) }
+	mei { ^Panola.scoreAsMEI(voices, [( measure: 1, meter: meter, key: key )], clefs, braces) }
 
 	/*
 	[method.show]
