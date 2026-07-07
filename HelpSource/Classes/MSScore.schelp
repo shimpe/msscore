@@ -28,6 +28,20 @@ code::
 ~score.stop;   // stop, free synths, clear
 ::
 
+strong::Mid-piece meter / key changes:: - pass strong::changes::, an Array of change Events applied at
+measure starts, to switch meter and/or key mid-score (each omitted field carries forward until the next
+change):
+code::
+changes: [ ( measure: 1, meter: "4/4", key: \Cmajor ),
+           ( measure: 5, meter: "3/4" ),          // meter change; key carries over
+           ( measure: 9, key: \Gmajor ) ]         // key change; meter carries over
+::
+When strong::changes:: is set it supersedes teletype::meter::/teletype::key::. A strong::clef:: change is
+instead inline in the link::Classes/Panola:: stream: tag a note teletype::@clef^bass^:: (or
+teletype::\treble::/teletype::\alto::/teletype::\tenor::) to switch that staff's clef at that note,
+mid-measure allowed. A key change never transposes - pitches stay as authored, accidentals are only
+respelled for the new signature.
+
 Per-note expression. A note may carry dynamics and articulation as link::Classes/Panola:: properties,
 which are engraved in the score.
 
@@ -131,6 +145,9 @@ the MusicScene OSC host (default: "127.0.0.1")
 ARGUMENT:: listenPort
 the MusicScene OSC listen port (default: 7400)
 
+ARGUMENT:: changes
+an Array of mid-piece change Events applied at measure starts, e.g. [ ( measure: 1, meter: "4/4", key: \Cmajor ), ( measure: 5, meter: "3/4" ) ]; each field carries forward until changed. When set it overrides meter/key (which then act only as fallbacks). Default: nil (a constant meter/key score). Mid-measure clef changes are inline in the Panola stream via @clef^bass^, not here.
+
 returns:: a new MSScore
 
 INSTANCEMETHODS::
@@ -151,6 +168,10 @@ METHOD:: key
 the key signature
 
 returns:: a key Symbol, e.g. \Cmajor
+METHOD:: changes
+the mid-piece meter/key changes list (or nil for a constant score); when set it overrides meter/key
+
+returns:: an Array of change Events ( measure:, meter:, key: ), or nil
 METHOD:: braces
 1-based [firstStaff, lastStaff] ranges braced together (e.g. a piano grand staff)
 
@@ -289,6 +310,9 @@ the OSC host
 
 ARGUMENT:: lport
 the OSC listen port
+
+ARGUMENT:: chg
+the mid-piece changes list (or nil for a constant meter/key score)
 
 returns:: this instance of MSScore
 

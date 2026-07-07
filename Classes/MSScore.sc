@@ -29,6 +29,20 @@ code::
 ~score.stop;   // stop, free synths, clear
 ::
 
+strong::Mid-piece meter / key changes:: - pass strong::changes::, an Array of change Events applied at
+measure starts, to switch meter and/or key mid-score (each omitted field carries forward until the next
+change):
+code::
+changes: [ ( measure: 1, meter: "4/4", key: \Cmajor ),
+           ( measure: 5, meter: "3/4" ),          // meter change; key carries over
+           ( measure: 9, key: \Gmajor ) ]         // key change; meter carries over
+::
+When strong::changes:: is set it supersedes teletype::meter::/teletype::key::. A strong::clef:: change is
+instead inline in the link::Classes/Panola:: stream: tag a note teletype::@clef^bass^:: (or
+teletype::\treble::/teletype::\alto::/teletype::\tenor::) to switch that staff's clef at that note,
+mid-measure allowed. A key change never transposes - pitches stay as authored, accidentals are only
+respelled for the new signature.
+
 Per-note expression. A note may carry dynamics and articulation as link::Classes/Panola:: properties,
 which are engraved in the score.
 
@@ -95,6 +109,13 @@ MSScore {
 	what = "a key Symbol, e.g. \\Cmajor"
 	*/
 	var <key;
+	/*
+	[method.changes]
+	description = "the mid-piece meter/key changes list (or nil for a constant score); when set it overrides meter/key"
+	[method.changes.returns]
+	what = "an Array of change Events ( measure:, meter:, key: ), or nil"
+	*/
+	var <changes;
 	/*
 	[method.braces]
 	description = "1-based [firstStaff, lastStaff] ranges braced together (e.g. a piano grand staff)"
@@ -254,14 +275,15 @@ MSScore {
 	showCursor = "true (default) to draw the playback cursor; false shows the score and still auto-turns pages, but without a visible cursor"
 	host = "the MusicScene OSC host (default: \"127.0.0.1\")"
 	listenPort = "the MusicScene OSC listen port (default: 7400)"
+	changes = "an Array of mid-piece change Events applied at measure starts, e.g. [ ( measure: 1, meter: \"4/4\", key: \\Cmajor ), ( measure: 5, meter: \"3/4\" ) ]; each field carries forward until changed. When set it overrides meter/key (which then act only as fallbacks). Default: nil (a constant meter/key score). Mid-measure clef changes are inline in the Panola stream via @clef^bass^, not here."
 	[classmethod.new.returns]
 	what = "a new MSScore"
 	*/
 	*new { | voices, clefs, meter = "4/4", key = \Cmajor, braces, tempo = 84, instruments,
 		backends, midiOut, channels, wrap,
 		id = "score", space = "2d", scale, showDelay = 1.0, paginate = true, pageHeight = 1200,
-		showCursor = true, host = "127.0.0.1", listenPort = 7400 |
-		^super.new.init(voices, clefs, meter, key, braces, tempo, instruments, backends, midiOut, channels, wrap, id, space, scale, showDelay, paginate, pageHeight, showCursor, host, listenPort);
+		showCursor = true, host = "127.0.0.1", listenPort = 7400, changes |
+		^super.new.init(voices, clefs, meter, key, braces, tempo, instruments, backends, midiOut, channels, wrap, id, space, scale, showDelay, paginate, pageHeight, showCursor, host, listenPort, changes);
 	}
 
 	/*
@@ -288,11 +310,13 @@ MSScore {
 	scr = "showCursor flag"
 	host = "the OSC host"
 	lport = "the OSC listen port"
+	chg = "the mid-piece changes list (or nil for a constant meter/key score)"
 	*/
-	init { | v, cl, m, k, br, t, instr, bk, mo, ch, wr, i, sp, sc, sd, pg, ph, scr, host, lport |
+	init { | v, cl, m, k, br, t, instr, bk, mo, ch, wr, i, sp, sc, sd, pg, ph, scr, host, lport, chg |
 		voices = v.collect({ |x| x.isKindOf(Panola).if({ x }, { Panola(x) }) });
 		clefs = cl ? voices.collect({ \treble });
 		meter = m; key = k; braces = br; tempo = t; id = i; space = sp;
+		changes = chg;                                     // nil -> constant meter/key; else a mid-piece changes list
 		instruments = instr ? voices.collect({ \default });
 		backends = bk ? voices.collect({ \internal });
 		channels = ch ? voices.collect({ |x, ix| ix });   // default: each voice on its own MIDI channel
@@ -353,7 +377,7 @@ MSScore {
 	[method.mei.returns]
 	what = "an MEI document (a String)"
 	*/
-	mei { ^Panola.scoreAsMEI(voices, [( measure: 1, meter: meter, key: key )], clefs, braces) }
+	mei { ^Panola.scoreAsMEI(voices, changes ? [( measure: 1, meter: meter, key: key )], clefs, braces) }
 
 	/*
 	[method.show]
