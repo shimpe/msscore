@@ -29,6 +29,11 @@ code::
 ~score.stop;   // stop, free synths, clear
 ::
 
+strong::Display only:: — to show the notation without playing it or drawing a cursor, use
+teletype::showPage(n):: (page teletype::n::, 1-based; default 1). Once shown, teletype::page(n)::,
+teletype::nextPage:: and teletype::prevPage:: flip between pages. Distinct pages need a paginated
+score (the default).
+
 strong::Mid-piece meter / key changes:: - pass strong::changes::, an Array of change Events applied at
 measure starts, to switch meter and/or key mid-score (each omitted field carries forward until the next
 change):
