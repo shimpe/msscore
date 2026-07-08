@@ -421,6 +421,26 @@ MSScore {
 	}
 
 	/*
+	[method.page]
+	description = "on an already-shown score, jump to a 1-based page (MusicScene clamps out-of-range). Distinct pages need a paginated score (the default); otherwise MusicScene re-renders that page."
+	[method.page.args]
+	pageNumber = "the 1-based page to show"
+	*/
+	page { | pageNumber = 1 | engine.sendMsg("/ms/scene/" ++ id, "page", pageNumber); }
+
+	/*
+	[method.nextPage]
+	description = "flip the shown score forward one page"
+	*/
+	nextPage { engine.sendMsg("/ms/scene/" ++ id, "nextpage"); }
+
+	/*
+	[method.prevPage]
+	description = "flip the shown score back one page"
+	*/
+	prevPage { engine.sendMsg("/ms/scene/" ++ id, "prevpage"); }
+
+	/*
 	[method.pr_allNotesOff]
 	description = "(private) send a MIDI All Notes Off (CC 123) to each \\midi voice's device and channel when stopping, so notes still sounding are released; each device+channel is sent once. (CC 123 does not release notes held by a sustain pedal.)"
 	*/
