@@ -380,22 +380,40 @@ MSScore {
 	mei { ^Panola.scoreAsMEI(voices, changes ? [( measure: 1, meter: meter, key: key )], clefs, braces) }
 
 	/*
+	[method.pr_emitSetup]
+	description = "(private) emit the notation-display OSC setup (create node, background, scale, pos, cursor, paginate, addressable, notationData). Runs INSIDE a Routine (uses waits). cursorOn draws the cursor line or not."
+	[method.pr_emitSetup.args]
+	cursorOn = "true to draw the cursor line, false to hide it"
+	*/
+	pr_emitSetup { | cursorOn |
+		var m = this.mei;
+		var snd = { |... a| engine.sendMsg(*a); 0.02.wait };
+		snd.("/ms/scene/" ++ id, "new", "notation");
+		snd.("/ms/scene/" ++ id, "background", "white");
+		snd.("/ms/scene/" ++ id, "scale", scale);
+		if (space == "3d") { snd.("/ms/scene/" ++ id, "pos", 0.0, 0.0, 0.0) } { snd.("/ms/scene/" ++ id, "pos", 0.0, 0.0) };
+		snd.("/ms/scene/" ++ id ++ "/cursor", "show", cursorOn.if({ 1 }, { 0 }));
+		snd.("/ms/scene/" ++ id, "paginate", paginate.if({ 1 }, { 0 }), pageHeight);
+		snd.("/ms/scene/" ++ id, "addressable", 1);
+		snd.("/ms/scene/" ++ id, "notationData", "mei", m);
+	}
+
+	/*
 	[method.show]
 	description = "display the notation in MusicScene, made addressable so note positions are known for the follow cursor. Non-blocking (sends the OSC setup from a Routine)."
 	*/
 	show {
-		var m = this.mei;
-		Routine({
-			var snd = { |... a| engine.sendMsg(*a); 0.02.wait };
-			snd.("/ms/scene/" ++ id, "new", "notation");
-			snd.("/ms/scene/" ++ id, "background", "white");
-			snd.("/ms/scene/" ++ id, "scale", scale);
-			if (space == "3d") { snd.("/ms/scene/" ++ id, "pos", 0.0, 0.0, 0.0) } { snd.("/ms/scene/" ++ id, "pos", 0.0, 0.0) };
-			snd.("/ms/scene/" ++ id ++ "/cursor", "show", showCursor.if({ 1 }, { 0 }));
-			snd.("/ms/scene/" ++ id, "paginate", paginate.if({ 1 }, { 0 }), pageHeight);
-			snd.("/ms/scene/" ++ id, "addressable", 1);
-			snd.("/ms/scene/" ++ id, "notationData", "mei", m);
-		}).play;
+		Routine({ this.pr_emitSetup(showCursor); }).play;
+	}
+
+	/*
+	[method.showPage]
+	description = "display the notation and show a given page, with NO cursor and NO playback (display only). Non-blocking. Distinct pages need a paginated score (the default). See link::Classes/MSScore#-page::, link::Classes/MSScore#-nextPage::, link::Classes/MSScore#-prevPage::."
+	[method.showPage.args]
+	pageNumber = "the 1-based page to show (default 1)"
+	*/
+	showPage { | pageNumber = 1 |
+		Routine({ this.pr_emitSetup(false); showDelay.wait; this.page(pageNumber); }).play;
 	}
 
 	/*
