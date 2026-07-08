@@ -414,5 +414,235 @@ returns:: this instance of MSScore
 EXAMPLES::
 
 code::
-(FIXME add some example code)
+// =====================================================================================
+// MSScore tutorial. MSScore turns one or more Panola strings into a notation score that
+// is shown, played and cursor-followed inside MusicScene (a Godot app).
+//
+// To run the PLAYING examples you need:
+//   * a booted audio server                 -> s.boot  (the examples wrap in s.waitForBoot)
+//   * a running MusicScene instance with Verovio  (pip install verovio)
+//   * the MSScore quark installed:  Quarks.install("https://github.com/shimpe/msscore")
+// The examples play on \default; pass your own SynthDef name(s) via `instruments:`.
+// Set `space:` to match your project's musicscene/space setting ("2d" or "3d").
+// Every example ends with a matching `~score.stop;` you can evaluate to stop + clear.
+// The very LAST example only builds the MEI and needs no MusicScene / no server.
+// =====================================================================================
+
+
+// -------------------------------------------------------------------------------------
+// 1. The simplest score: one voice. `play` shows the notation, plays the voice, and
+//    follows along with a note-accurate cursor. Durations are Panola: c5_4 = a quarter
+//    note on c5, and a duration carries over until it changes (e5 g5 are quarters too).
+// -------------------------------------------------------------------------------------
+(
+s.waitForBoot({
+    ~score = MSScore(voices: ["c5_4 e5 g5 c6"], instruments: [\default]);
+    ~score.play;
+});
+)
+~score.stop;
+
+
+// -------------------------------------------------------------------------------------
+// 2. Several voices, one staff each. `clefs` sets each staff's clef; `braces` joins
+//    staves with a brace (a piano grand staff here). Chords use <angle brackets>; a
+//    rest is `r`.
+// -------------------------------------------------------------------------------------
+(
+s.waitForBoot({
+    ~score = MSScore(
+        voices: [ "c5_4 e5 g5 c6", "<c4_2 e4 g4> <b3_2 d4 g4>", "c3_1" ],
+        clefs:  [\treble, \treble, \bass],
+        braces: [[1, 2]],                       // brace staves 1 and 2
+        tempo:  96,
+        scale:  1.0,
+        instruments: [\default, \default, \default]
+    );
+    ~score.play;
+});
+)
+~score.stop;
+
+
+// -------------------------------------------------------------------------------------
+// 3. Meter and key. Barlines are derived from `meter`; accidentals are spelled relative
+//    to `key` (an authored f prints as f-natural in C major here).
+// -------------------------------------------------------------------------------------
+(
+s.waitForBoot({
+    ~score = MSScore(
+        voices: [ "c5_4 d5 e5 f5 g5_2 a5 b5 c6_1" ],
+        meter:  "4/4", key: \Cmajor, tempo: 100, scale: 1.0,
+        instruments: [\default]
+    );
+    ~score.play;
+});
+)
+~score.stop;
+
+
+// -------------------------------------------------------------------------------------
+// 4. Rhythm: dotted notes (a `.` after the duration) and tuplets (`*num/den`). A triplet
+//    of eighths is `_8*2/3`; the ratio carries over like the duration does.
+// -------------------------------------------------------------------------------------
+(
+s.waitForBoot({
+    ~score = MSScore(
+        voices: [ "c5_4. e5_8 g5_8*2/3 a5 b5 c6_2" ],
+        meter: "4/4", key: \Cmajor, tempo: 92, scale: 1.0,
+        instruments: [\default]
+    );
+    ~score.play;
+});
+)
+~score.stop;
+
+
+// -------------------------------------------------------------------------------------
+// 5. Dynamics. A one-shot @dyn^mark^ places a dynamic at that note. Standard marks
+//    render in the dynamics font (pppp..ffff, plus fp sf sfz sffz rf rfz fz sfp).
+// -------------------------------------------------------------------------------------
+(
+s.waitForBoot({
+    ~score = MSScore(
+        voices: [ "c5_4@dyn^p^ e5 g5 c6@dyn^f^ g5_2 e5_2" ],
+        tempo: 96, scale: 1.0, instruments: [\default]
+    );
+    ~score.play;
+});
+)
+~score.stop;
+
+
+// -------------------------------------------------------------------------------------
+// 6. Articulation. @art[name:on] .. @art[name:off] toggles an articulation over a
+//    passage; a one-shot @art^name^ marks a single note; combine several on one note
+//    with `+`. Names (friendly or MEI code): staccato accent tenuto marcato spiccato
+//    staccatissimo.
+// -------------------------------------------------------------------------------------
+(
+s.waitForBoot({
+    ~score = MSScore(
+        voices: [ "c5_8@art[stacc:on] d5 e5 f5 g5@art[stacc:off] a5_4@art^accent^ b5_4@art^staccato+accent^ c6_2" ],
+        tempo: 108, scale: 1.0, instruments: [\default]
+    );
+    ~score.play;
+});
+)
+~score.stop;
+
+
+// -------------------------------------------------------------------------------------
+// 7. Slurs and hairpins. @slur^start^ .. @slur^end^ draws a slur (@slur^endstart^ chains
+//    phrases). @hairpin^cresc^ (or ^dim^) .. @hairpin^end^ draws a crescendo/decrescendo;
+//    @hairpin^endcresc^ / ^enddim^ chain a messa di voce (< >).
+// -------------------------------------------------------------------------------------
+(
+s.waitForBoot({
+    ~score = MSScore(
+        voices: [ "c5_4@slur^start^@hairpin^cresc^ e5 g5 c6@slur^end^@hairpin^enddim^ g5 e5 c5@hairpin^end^" ],
+        tempo: 88, scale: 1.0, instruments: [\default]
+    );
+    ~score.play;
+});
+)
+~score.stop;
+
+
+// -------------------------------------------------------------------------------------
+// 8. Mid-piece meter / key changes. `changes` is a list of Events applied at the start
+//    of a (1-based) measure; each omitted field carries forward. When set it supersedes
+//    the plain meter/key. A clef change is instead INLINE in the Panola stream:
+//    @clef^bass^ (also ^treble^/^alto^/^tenor^) switches that staff's clef at that note.
+//    A key change never transposes - accidentals are only respelled for the new key.
+// -------------------------------------------------------------------------------------
+(
+s.waitForBoot({
+    ~score = MSScore(
+        voices: [ "c5_4 e5 g5 e5 d5_4 f#5 a5 f#5 g5_4 b5 d6 b5 c6_2 g5_4@clef^bass^ c4" ],
+        changes: [ ( measure: 1, meter: "4/4", key: \Cmajor ),
+                   ( measure: 2, key: \Gmajor ),        // key change; meter carries over
+                   ( measure: 4, meter: "3/4" ) ],      // meter change; key carries over
+        tempo: 96, scale: 1.0, instruments: [\default]
+    );
+    ~score.play;
+});
+)
+~score.stop;
+
+
+// -------------------------------------------------------------------------------------
+// 9. Forced page & system breaks (manual layout). `pageBreaks` starts a new PAGE at the
+//    listed 1-based bars (manual pagination - you control every page boundary, auto
+//    page-fill is off); `systemBreaks` starts a new LINE while keeping auto pagination.
+//    Use with paginate:true; pageHeight sets the page size.
+// -------------------------------------------------------------------------------------
+(
+s.waitForBoot({
+    ~score = MSScore(
+        voices: [ "c5_4 e5 g5 e5 d5_4 f5 a5 f5 e5_4 g5 b5 g5 f5_4 a5 c6 a5 g5_1" ],
+        paginate: true, pageHeight: 900,
+        systemBreaks: [3],                 // new line at bar 3
+        pageBreaks:   [5],                 // new page at bar 5
+        tempo: 92, scale: 1.0, instruments: [\default]
+    );
+    ~score.play;
+});
+)
+~score.stop;
+
+
+// -------------------------------------------------------------------------------------
+// 10. Display only - show a given page with NO cursor and NO playback. `showPage(n)`
+//     engraves and shows page n (1-based); `page(n)`, `nextPage`, `prevPage` flip between
+//     pages. Distinct pages need a paginated score (a small pageHeight => more pages).
+// -------------------------------------------------------------------------------------
+(
+~score = MSScore(
+    voices: [ (1..32).collect({ |i| ["c5","e5","g5","a5","f5","d5"].wrapAt(i) ++ "_8" }).join(" ") ],
+    paginate: true, pageHeight: 300,       // small page => several pages
+    scale: 1.0, instruments: [\default]
+);
+~score.showPage(1);                        // display page 1 (no sound, no cursor)
+)
+~score.nextPage;                           // -> page 2
+~score.prevPage;                           // -> page 1
+~score.page(2);                            // jump to page 2
+~score.stop;                               // clear the scene
+
+
+// -------------------------------------------------------------------------------------
+// 11. Play a voice on an EXTERNAL / hardware synth over MIDI. Set `backends` to \midi
+//     for that voice and pass a `midiOut` (a MIDIOut you created); `channels` gives each
+//     voice a MIDI channel. The follow cursor works the same over MIDI.
+// -------------------------------------------------------------------------------------
+(
+MIDIClient.init;
+~mout = MIDIOut.newByName("your device name", "your port name");   // <- your device
+s.waitForBoot({
+    ~score = MSScore(
+        voices:   [ "c5_4 e5 g5 c6", "c3_2 g3" ],
+        clefs:    [\treble, \bass],
+        backends: [\midi, \internal],                 // voice 1 -> MIDI, voice 2 -> SC synth
+        midiOut:  ~mout,
+        channels: [1, nil],                           // voice 1 on MIDI channel 1
+        instruments: [\default, \default]             // used only by the \internal voice
+    );
+    ~score.play;
+});
+)
+~score.stop;
+
+
+// -------------------------------------------------------------------------------------
+// 12. No MusicScene needed: just build the MEI document (a String). Useful to inspect
+//     the notation, or write it to a .mei file for any MEI renderer (Verovio, etc.).
+// -------------------------------------------------------------------------------------
+(
+~score = MSScore(voices: [ "c5_4 e5 g5 c6" ], instruments: [\default]);
+~mei = ~score.mei;                          // the MEI as a String
+~mei.postln;
+// File.use(Platform.defaultTempDir +/+ "score.mei", "w", { |f| f.write(~mei) });
+)
+
 ::
