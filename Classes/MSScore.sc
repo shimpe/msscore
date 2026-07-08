@@ -122,6 +122,21 @@ MSScore {
 	*/
 	var <changes;
 	/*
+	[method.pageBreaks]
+	description = "list of 1-based measure numbers where a new PAGE starts (nil for none). Emits MEI <pb/> and switches the render to manual pagination — you control every page boundary and auto page-fill is off (Verovio limitation). Use with paginate:true; pageHeight sets the page size."
+	[method.pageBreaks.returns]
+	what = "an Array of measure numbers, or nil"
+	*/
+	var <pageBreaks;
+
+	/*
+	[method.systemBreaks]
+	description = "list of 1-based measure numbers where a new SYSTEM (line) starts (nil for none). Emits MEI <sb/>; unlike pageBreaks, auto pagination is kept (pages still fill by pageHeight)."
+	[method.systemBreaks.returns]
+	what = "an Array of measure numbers, or nil"
+	*/
+	var <systemBreaks;
+	/*
 	[method.braces]
 	description = "1-based [firstStaff, lastStaff] ranges braced together (e.g. a piano grand staff)"
 	[method.braces.returns]
@@ -287,8 +302,8 @@ MSScore {
 	*new { | voices, clefs, meter = "4/4", key = \Cmajor, braces, tempo = 84, instruments,
 		backends, midiOut, channels, wrap,
 		id = "score", space = "2d", scale, showDelay = 1.0, paginate = true, pageHeight = 1200,
-		showCursor = true, host = "127.0.0.1", listenPort = 7400, changes |
-		^super.new.init(voices, clefs, meter, key, braces, tempo, instruments, backends, midiOut, channels, wrap, id, space, scale, showDelay, paginate, pageHeight, showCursor, host, listenPort, changes);
+		showCursor = true, host = "127.0.0.1", listenPort = 7400, changes, pageBreaks, systemBreaks |
+		^super.new.init(voices, clefs, meter, key, braces, tempo, instruments, backends, midiOut, channels, wrap, id, space, scale, showDelay, paginate, pageHeight, showCursor, host, listenPort, changes, pageBreaks, systemBreaks);
 	}
 
 	/*
@@ -317,11 +332,13 @@ MSScore {
 	lport = "the OSC listen port"
 	chg = "the mid-piece changes list (or nil for a constant meter/key score)"
 	*/
-	init { | v, cl, m, k, br, t, instr, bk, mo, ch, wr, i, sp, sc, sd, pg, ph, scr, host, lport, chg |
+	init { | v, cl, m, k, br, t, instr, bk, mo, ch, wr, i, sp, sc, sd, pg, ph, scr, host, lport, chg, pgbr, sysbr |
 		voices = v.collect({ |x| x.isKindOf(Panola).if({ x }, { Panola(x) }) });
 		clefs = cl ? voices.collect({ \treble });
 		meter = m; key = k; braces = br; tempo = t; id = i; space = sp;
 		changes = chg;                                     // nil -> constant meter/key; else a mid-piece changes list
+		pageBreaks = pgbr;                                 // nil -> no forced page breaks (auto-pagination)
+		systemBreaks = sysbr;                              // nil -> no forced system/line breaks
 		instruments = instr ? voices.collect({ \default });
 		backends = bk ? voices.collect({ \internal });
 		channels = ch ? voices.collect({ |x, ix| ix });   // default: each voice on its own MIDI channel
@@ -382,7 +399,7 @@ MSScore {
 	[method.mei.returns]
 	what = "an MEI document (a String)"
 	*/
-	mei { ^Panola.scoreAsMEI(voices, changes ? [( measure: 1, meter: meter, key: key )], clefs, braces) }
+	mei { ^Panola.scoreAsMEI(voices, changes ? [( measure: 1, meter: meter, key: key )], clefs, braces, pageBreaks, systemBreaks) }
 
 	/*
 	[method.pr_emitSetup]
