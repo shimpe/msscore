@@ -33,6 +33,8 @@ teletype::showPage(n):: (page teletype::n::, 1-based; default 1). Once shown, te
 teletype::nextPage:: and teletype::prevPage:: flip between pages. Distinct pages need a paginated
 score (the default).
 
+strong::Forced breaks:: - teletype::pageBreaks: [5, 9]:: starts a new page at those bars (manual pagination: you control every page boundary, auto page-fill is off), and teletype::systemBreaks: [3]:: starts a new line while keeping auto pagination. Use with teletype::paginate: true::.
+
 strong::Mid-piece meter / key changes:: - pass strong::changes::, an Array of change Events applied at
 measure starts, to switch meter and/or key mid-score (each omitted field carries forward until the next
 change):
@@ -177,6 +179,14 @@ METHOD:: changes
 the mid-piece meter/key changes list (or nil for a constant score); when set it overrides meter/key
 
 returns:: an Array of change Events ( measure:, meter:, key: ), or nil
+METHOD:: pageBreaks
+list of 1-based measure numbers where a new PAGE starts (nil for none). Emits MEI <pb/> and switches the render to manual pagination — you control every page boundary and auto page-fill is off (Verovio limitation). Use with paginate:true; pageHeight sets the page size.
+
+returns:: an Array of measure numbers, or nil
+METHOD:: systemBreaks
+list of 1-based measure numbers where a new SYSTEM (line) starts (nil for none). Emits MEI <sb/>; unlike pageBreaks, auto pagination is kept (pages still fill by pageHeight).
+
+returns:: an Array of measure numbers, or nil
 METHOD:: braces
 1-based [firstStaff, lastStaff] ranges braced together (e.g. a piano grand staff)
 

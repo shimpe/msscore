@@ -34,6 +34,8 @@ teletype::showPage(n):: (page teletype::n::, 1-based; default 1). Once shown, te
 teletype::nextPage:: and teletype::prevPage:: flip between pages. Distinct pages need a paginated
 score (the default).
 
+strong::Forced breaks:: - teletype::pageBreaks: [5, 9]:: starts a new page at those bars (manual pagination: you control every page boundary, auto page-fill is off), and teletype::systemBreaks: [3]:: starts a new line while keeping auto pagination. Use with teletype::paginate: true::.
+
 strong::Mid-piece meter / key changes:: - pass strong::changes::, an Array of change Events applied at
 measure starts, to switch meter and/or key mid-score (each omitted field carries forward until the next
 change):
