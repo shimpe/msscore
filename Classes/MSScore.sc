@@ -418,7 +418,10 @@ MSScore {
 	pageNumber = "the 1-based page to show (default 1)"
 	*/
 	showPage { | pageNumber = 1 |
-		Routine({ this.pr_emitSetup(false); showDelay.wait; this.page(pageNumber); }).play;
+		// send the page request right after the setup (NOT after showDelay): MusicScene remembers the
+		// requested page and applies it once the async render lands, so no timer is needed — and a later
+		// nextPage/prevPage/page() is not overridden by a late-firing deferred page.
+		Routine({ this.pr_emitSetup(false); this.page(pageNumber); }).play;
 	}
 
 	/*
