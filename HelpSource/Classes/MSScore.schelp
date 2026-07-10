@@ -1,7 +1,7 @@
 TITLE:: MSScore
 summary:: write, play and visualize a score in MusicScene from Panola string(s)
 categories:: Notation, Utils
-related:: Classes/Panola, Classes/Pbind, Classes/Ppar
+related:: Classes/Panola, Classes/Pbind, Classes/Pbindf, Classes/Ppar
 
 DESCRIPTION::
 MSScore turns one or more link::Classes/Panola:: strings into a music-notation score in
@@ -635,7 +635,68 @@ s.waitForBoot({
 
 
 // -------------------------------------------------------------------------------------
-// 12. No MusicScene needed: just build the MEI document (a String). Useful to inspect
+// 12. Postprocess a voice's pattern with `wrap` - make the PRINTED marks AUDIBLE.
+//     MSScore builds each voice's pattern with Panola's asPbind (asMidiPbind for a \midi
+//     voice) and then hands it to your wrap Function, { |pattern, voiceIndex| newPattern }.
+//     One entry per voice; nil leaves a voice alone.
+//
+//     Every Panola @property arrives as a Pbind key of the same name (@vol -> \amp,
+//     @pdur -> \legato). The notation marks come through as Symbols - \dyn, \art, \slur,
+//     \hairpin - so this is where a printed `mf` becomes a real amplitude and a printed
+//     staccato dot becomes a short note. Pbindf APPENDS keys, so your Pfunc already sees
+//     everything Panola computed; naming a key Panola set replaces its value.
+// -------------------------------------------------------------------------------------
+(
+s.waitForBoot({
+    ~amp = ( pp: 0.15, p: 0.25, mp: 0.35, mf: 0.5, f: 0.7, ff: 0.9 );
+    ~score = MSScore(
+        voices: [ "c5_4@dyn[mf]@art^staccato^ e5@art^staccato^ g5_2 c6_4@dyn[ff]@art^staccato^ g5_2" ],
+        wrap: [
+            { |pat, i|
+                Pbindf(pat,
+                    \amp,    Pfunc { |ev| ~amp[ev[\dyn]] ? 0.4 },
+                    \legato, Pfunc { |ev| if (ev[\art] == \staccato) { 0.3 } { 0.9 } })
+            }
+        ]
+    );
+    ~score.play;    // 2 dynamics and 3 staccato dots on the page - and in the sound
+});
+)
+~score.stop;
+
+// Notes on `wrap`:
+//
+//  * Dynamics are printed ON CHANGE, so a static @dyn[mf] engraves exactly one `mf`, just
+//    like the one-shot @dyn^mf^. They differ in the PATTERN: static carries `mf` to every
+//    later note, while one-shot leaves the rest at \none. Author @dyn static when a wrap
+//    function should hear the dynamic. Articulations are per-note, so static @art[staccato]
+//    dots EVERY note - use the one-shot @art^staccato^ for a single dot, as above.
+//  * On notes where a mark is not set you get \none, never nil or ''. A property never
+//    authored anywhere in that voice has no key at all (ev[\dyn] is nil).
+//  * The toggle form yields the raw string: @art[staccato:on] gives 'staccato:on' (and
+//    'staccato:off' afterwards), NOT \staccato. Compare accordingly.
+//  * Do NOT rewrite \dur. The follow cursor is driven by the score's own beat count on the
+//    shared TempoClock, not by the pattern, so changing note durations desynchronises the
+//    cursor from the audio. There is no \tempo key either - the `tempo:` argument owns the
+//    clock.
+//  * `wrap` also applies to \midi voices (it runs after asMidiPbind); that is how you add
+//    per-note CC, sustain pedal or program change.
+//  * One entry per voice, or MSScore raises "'wrap' must have one entry per voice".
+//
+// The other idiom, for SIDE EFFECTS or state (a slur state machine, a MIDI controller):
+// append a dummy key whose Pfunc mutates the event in place and returns 0.
+//
+//    Pbindf(pat, \handle, Pfunc { |ev|
+//        if (ev[\art] == \stacc) { ev[\legato] = 0.5 } { ev[\legato] = 0.9 };
+//        midiOut.control(0, 64, (ev[\ped] ? 0).asInteger);   // sustain pedal from @ped
+//        0 })
+//
+// See examples/supercollider/example_msscore_midi.scd in the MusicScene repository for a
+// worked version that reads \art and \slur to phrase a MIDI voice.
+
+
+// -------------------------------------------------------------------------------------
+// 13. No MusicScene needed: just build the MEI document (a String). Useful to inspect
 //     the notation, or write it to a .mei file for any MEI renderer (Verovio, etc.).
 // -------------------------------------------------------------------------------------
 (
