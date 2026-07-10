@@ -35,6 +35,11 @@ score (the default).
 
 strong::Forced breaks:: - teletype::pageBreaks: [5, 9]:: starts a new page at those bars (manual pagination: you control every page boundary, auto page-fill is off), and teletype::systemBreaks: [3]:: starts a new line while keeping auto pagination. Use with teletype::paginate: true::.
 
+strong::Lyrics:: — teletype::lyrics: [ [ "Twin-kle lit-tle star" ], nil ]:: engraves sung text under each
+staff (an Array parallel to teletype::voices::: a list of verse lines, a bare String for one verse, or nil).
+Whitespace separates words, teletype::-:: separates syllables, teletype::_:: is a melisma, teletype::\\::
+escapes. Notation only — lyrics never affect playback. See link::Classes/PanolaMEI               
+
 strong::Mid-piece meter / key changes:: - pass strong::changes::, an Array of change Events applied at
 measure starts, to switch meter and/or key mid-score (each omitted field carries forward until the next
 change):
@@ -187,6 +192,10 @@ METHOD:: systemBreaks
 list of 1-based measure numbers where a new SYSTEM (line) starts (nil for none). Emits MEI <sb/>; unlike pageBreaks, auto pagination is kept (pages still fill by pageHeight).
 
 returns:: an Array of measure numbers, or nil
+METHOD:: lyrics
+per-staff lyrics: an Array parallel to voices. Each entry is nil (no lyrics on that staff), an Array of verse-line Strings (stacked as <verse n="1">, <verse n="2">, ...), or a bare String (one verse). Whitespace separates words, '-' separates syllables (a hyphen is drawn), a whole-token '_' is a melisma (the next note holds the previous syllable), and '\' escapes the next character. Notation only — lyrics never affect playback.
+
+returns:: an Array (parallel to voices) of verse-line lists / Strings / nil, or nil
 METHOD:: braces
 1-based [firstStaff, lastStaff] ranges braced together (e.g. a piano grand staff)
 
