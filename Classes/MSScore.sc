@@ -139,6 +139,13 @@ MSScore {
 	*/
 	var <systemBreaks;
 	/*
+	[method.lyrics]
+	description = "per-staff lyrics: an Array parallel to voices. Each entry is nil (no lyrics on that staff), an Array of verse-line Strings (stacked as <verse n=\"1\">, <verse n=\"2\">, ...), or a bare String (one verse). Whitespace separates words, '-' separates syllables (a hyphen is drawn), a whole-token '_' is a melisma (the next note holds the previous syllable), and '\\' escapes the next character. Notation only — lyrics never affect playback."
+	[method.lyrics.returns]
+	what = "an Array (parallel to voices) of verse-line lists / Strings / nil, or nil"
+	*/
+	var <lyrics;
+	/*
 	[method.braces]
 	description = "1-based [firstStaff, lastStaff] ranges braced together (e.g. a piano grand staff)"
 	[method.braces.returns]
@@ -304,8 +311,8 @@ MSScore {
 	*new { | voices, clefs, meter = "4/4", key = \Cmajor, braces, tempo = 84, instruments,
 		backends, midiOut, channels, wrap,
 		id = "score", space = "2d", scale, showDelay = 1.0, paginate = true, pageHeight = 1200,
-		showCursor = true, host = "127.0.0.1", listenPort = 7400, changes, pageBreaks, systemBreaks |
-		^super.new.init(voices, clefs, meter, key, braces, tempo, instruments, backends, midiOut, channels, wrap, id, space, scale, showDelay, paginate, pageHeight, showCursor, host, listenPort, changes, pageBreaks, systemBreaks);
+		showCursor = true, host = "127.0.0.1", listenPort = 7400, changes, pageBreaks, systemBreaks, lyrics |
+		^super.new.init(voices, clefs, meter, key, braces, tempo, instruments, backends, midiOut, channels, wrap, id, space, scale, showDelay, paginate, pageHeight, showCursor, host, listenPort, changes, pageBreaks, systemBreaks, lyrics);
 	}
 
 	/*
@@ -334,13 +341,14 @@ MSScore {
 	lport = "the OSC listen port"
 	chg = "the mid-piece changes list (or nil for a constant meter/key score)"
 	*/
-	init { | v, cl, m, k, br, t, instr, bk, mo, ch, wr, i, sp, sc, sd, pg, ph, scr, host, lport, chg, pgbr, sysbr |
+	init { | v, cl, m, k, br, t, instr, bk, mo, ch, wr, i, sp, sc, sd, pg, ph, scr, host, lport, chg, pgbr, sysbr, lyr |
 		voices = v.collect({ |x| x.isKindOf(Panola).if({ x }, { Panola(x) }) });
 		clefs = cl ? voices.collect({ \treble });
 		meter = m; key = k; braces = br; tempo = t; id = i; space = sp;
 		changes = chg;                                     // nil -> constant meter/key; else a mid-piece changes list
 		pageBreaks = pgbr;                                 // nil -> no forced page breaks (auto-pagination)
 		systemBreaks = sysbr;                              // nil -> no forced system/line breaks
+		lyrics = lyr;                                      // nil -> no lyrics; else per-staff verse lines
 		instruments = instr ? voices.collect({ \default });
 		backends = bk ? voices.collect({ \internal });
 		channels = ch ? voices.collect({ |x, ix| ix });   // default: each voice on its own MIDI channel
@@ -401,7 +409,7 @@ MSScore {
 	[method.mei.returns]
 	what = "an MEI document (a String)"
 	*/
-	mei { ^Panola.scoreAsMEI(voices, changes ? [( measure: 1, meter: meter, key: key )], clefs, braces, pageBreaks, systemBreaks) }
+	mei { ^Panola.scoreAsMEI(voices, changes ? [( measure: 1, meter: meter, key: key )], clefs, braces, pageBreaks, systemBreaks, lyrics) }
 
 	/*
 	[method.pr_emitSetup]
