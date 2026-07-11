@@ -81,7 +81,9 @@ per staff); teletype::instruments:: applies only to teletype::\internal:: voices
 control (CC, sustain pedal, program change) pass strong::wrap::, a teletype::{ |pattern, i| newPattern }::
 per voice applied to the built pattern - e.g.
 teletype::{ |pat, i| Pbindf(pat, \handle, Pfunc { |ev| midiOut.control(ev[\chan], 64, (ev[\ped] ? 0).asInteger) }) }::
-turns a teletype::@ped:: property into a sustain-pedal controller. You create and own the MIDIOut
+turns a teletype::@ped:: property into a sustain-pedal controller. strong::wrap:: changes only the
+audible pattern (playback); it never affects the engraved notation, which is built from the Panola
+strings directly. You create and own the MIDIOut
 (teletype::MIDIClient.init; MIDIOut.newByName(...)::); MSScore never opens devices. The follow cursor works
 the same over MIDI.
 
@@ -205,7 +207,7 @@ MSScore {
 	var <channels;
 	/*
 	[method.wrap]
-	description = "per-voice pattern transform applied after the base pattern is built: nil, or a Function { |pattern, voiceIndex| newPattern }. Use it to add per-note MIDI control (CC / sustain pedal / program change) while keeping the shared clock and follow cursor."
+	description = "per-voice pattern transform applied after the base pattern is built: nil, or a Function { |pattern, voiceIndex| newPattern }. Use it to add per-note MIDI control (CC / sustain pedal / program change) while keeping the shared clock and follow cursor. Affects PLAYBACK only - it never changes the engraved notation (the score is built from the Panola strings directly)."
 	[method.wrap.returns]
 	what = "an Array whose entries are nil or a Function"
 	*/
@@ -296,7 +298,7 @@ MSScore {
 	backends = "an Array of \\internal (SuperCollider synth) or \\midi (external/hardware synth), one per voice (default: all \\internal)"
 	midiOut = "a MIDIOut shared by all \\midi voices, or an Array of MIDIOut (one per voice); required if any voice is \\midi"
 	channels = "an Array of MIDI channels (0..15), one per voice, used only by \\midi voices (default: each voice's index)"
-	wrap = "an Array whose entries are nil or a Function { |pattern, i| newPattern } applied to a voice's built pattern - use it to add per-note MIDI control (CC / sustain pedal / program change); default: all nil"
+	wrap = "an Array whose entries are nil or a Function { |pattern, i| newPattern } applied to a voice's built pattern - use it to add per-note MIDI control (CC / sustain pedal / program change); default: all nil. Affects PLAYBACK only, never the engraved notation."
 	id = "the MusicScene object id for the score"
 	space = "\"2d\" or \"3d\" — match the project's musicscene/space setting"
 	scale = "on-screen size of the score (default: 2.5 in \"3d\", 0.7 in \"2d\")"
@@ -836,6 +838,8 @@ s.waitForBoot({
 //  * `wrap` also applies to \midi voices (it runs after asMidiPbind); that is how you add
 //    per-note CC, sustain pedal or program change.
 //  * One entry per voice, or MSScore raises "'wrap' must have one entry per voice".
+//  * `wrap` changes PLAYBACK only. The engraved notation is built from the Panola strings
+//    directly (scoreAsMEI), so a wrap function never changes what is PRINTED - only what is heard.
 //
 // The other idiom, for SIDE EFFECTS or state (a slur state machine, a MIDI controller):
 // append a dummy key whose Pfunc mutates the event in place and returns 0.
