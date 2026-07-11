@@ -307,6 +307,9 @@ MSScore {
 	host = "the MusicScene OSC host (default: \"127.0.0.1\")"
 	listenPort = "the MusicScene OSC listen port (default: 7400)"
 	changes = "an Array of mid-piece change Events applied at measure starts, e.g. [ ( measure: 1, meter: \"4/4\", key: \\Cmajor ), ( measure: 5, meter: \"3/4\" ) ]; each field carries forward until changed. When set it overrides meter/key (which then act only as fallbacks). Default: nil (a constant meter/key score). Mid-measure clef changes are inline in the Panola stream via @clef^bass^, not here."
+	pageBreaks = "an Array of 1-based measure numbers where a new PAGE starts (nil for none); manual pagination, auto page-fill off. Use with paginate:true."
+	systemBreaks = "an Array of 1-based measure numbers where a new SYSTEM (line) starts (nil for none); auto pagination is kept."
+	lyrics = "per-staff lyrics: an Array parallel to voices, each entry nil, an Array of verse-line Strings (several verses), or a bare String (one verse). A space separates words, a hyphen separates syllables, an underscore is a melisma, and a backslash escapes the next character. Notation only."
 	[classmethod.new.returns]
 	what = "a new MSScore"
 	*/
@@ -342,6 +345,9 @@ MSScore {
 	host = "the OSC host"
 	lport = "the OSC listen port"
 	chg = "the mid-piece changes list (or nil for a constant meter/key score)"
+	pgbr = "the page-break measure numbers (or nil)"
+	sysbr = "the system-break measure numbers (or nil)"
+	lyr = "the per-staff lyrics (or nil)"
 	*/
 	init { | v, cl, m, k, br, t, instr, bk, mo, ch, wr, i, sp, sc, sd, pg, ph, scr, host, lport, chg, pgbr, sysbr, lyr |
 		voices = v.collect({ |x| x.isKindOf(Panola).if({ x }, { Panola(x) }) });
