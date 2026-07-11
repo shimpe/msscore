@@ -36,11 +36,7 @@ score (the default).
 
 strong::Forced breaks:: - teletype::pageBreaks: [5, 9]:: starts a new page at those bars (manual pagination: you control every page boundary, auto page-fill is off), and teletype::systemBreaks: [3]:: starts a new line while keeping auto pagination. Use with teletype::paginate: true::.
 
-strong::Lyrics:: engrave sung text under each staff. Panola's teletype::lyrics: [ [ "Twin-kle lit-tle
-star" ], nil ]:: is an Array parallel to teletype::voices:: (a list of verse lines, a bare String for one
-verse, or nil). Whitespace separates words, teletype::-:: separates syllables, teletype::_:: is a melisma,
-and teletype::\\:: escapes. Lyrics are notation only and never affect playback; for the full rules see
-link::Classes/PanolaMEI#*scoreAsMEI::.
+strong::Lyrics:: engrave sung text under each staff: pass teletype::lyrics::, an Array parallel to teletype::voices:: (each entry a list of verse-line Strings, a bare String for one verse, or nil). Whitespace separates words, teletype::-:: separates syllables (a hyphen is drawn), teletype::_:: is a melisma, and a backslash escapes the next character. Lyrics are notation only and never affect playback; for the full rules see link::Classes/PanolaMEI::.
 
 strong::Mid-piece meter / key changes:: - pass strong::changes::, an Array of change Events applied at
 measure starts, to switch meter and/or key mid-score (each omitted field carries forward until the next
