@@ -447,7 +447,7 @@ MSScore {
 	*/
 	pr_emitSetup { | cursorOn |
 		var isLy = (notation == \lilypond) or: { notation == \ly };
-		var fmt = isLy.if({ "ly" }, { "mei" }), data = isLy.if({ this.ly }, { this.mei });
+		var fmt = isLy.if({ "lilypond" }, { "mei" }), data = isLy.if({ this.ly }, { this.mei });
 		var snd = { |... a| engine.sendMsg(*a); 0.02.wait };
 		snd.("/ms/scene/" ++ id, "new", "notation");
 		snd.("/ms/scene/" ++ id, "background", "white");
