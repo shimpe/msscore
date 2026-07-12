@@ -150,6 +150,13 @@ MSScore {
 	*/
 	var <lyrics;
 	/*
+	[method.notation]
+	description = "the notation engine: \\verovio (default; MEI rendered by Verovio, paginated) or \\lilypond (LilyPond source rendered by the LilyPond engraver as a single cropped image — no auto page-turn). For \\lilypond, set the musicscene/notation/engraver/lilypond project setting to your LilyPond executable."
+	[method.notation.returns]
+	what = "a Symbol (\\verovio or \\lilypond)"
+	*/
+	var <notation;
+	/*
 	[method.braces]
 	description = "1-based [firstStaff, lastStaff] ranges braced together (e.g. a piano grand staff)"
 	[method.braces.returns]
@@ -312,14 +319,15 @@ MSScore {
 	pageBreaks = "an Array of 1-based measure numbers where a new PAGE starts (nil for none); manual pagination, auto page-fill off. Use with paginate:true."
 	systemBreaks = "an Array of 1-based measure numbers where a new SYSTEM (line) starts (nil for none); auto pagination is kept."
 	lyrics = "per-staff lyrics: an Array parallel to voices, each entry nil, an Array of verse-line Strings (several verses), or a bare String (one verse). A space separates words, a hyphen separates syllables, an underscore is a melisma, and a backslash escapes the next character. Notation only."
+	notation = "the notation engine: \\verovio (default, MEI + Verovio, paginated) or \\lilypond (LilyPond, a single cropped image). For \\lilypond set the musicscene/notation/engraver/lilypond project setting."
 	[classmethod.new.returns]
 	what = "a new MSScore"
 	*/
 	*new { | voices, clefs, meter = "4/4", key = \Cmajor, braces, tempo = 84, instruments,
 		backends, midiOut, channels, wrap,
 		id = "score", space = "2d", scale, showDelay = 1.0, paginate = true, pageHeight = 1200,
-		showCursor = true, host = "127.0.0.1", listenPort = 7400, changes, pageBreaks, systemBreaks, lyrics |
-		^super.new.init(voices, clefs, meter, key, braces, tempo, instruments, backends, midiOut, channels, wrap, id, space, scale, showDelay, paginate, pageHeight, showCursor, host, listenPort, changes, pageBreaks, systemBreaks, lyrics);
+		showCursor = true, host = "127.0.0.1", listenPort = 7400, changes, pageBreaks, systemBreaks, lyrics, notation = \verovio |
+		^super.new.init(voices, clefs, meter, key, braces, tempo, instruments, backends, midiOut, channels, wrap, id, space, scale, showDelay, paginate, pageHeight, showCursor, host, listenPort, changes, pageBreaks, systemBreaks, lyrics, notation);
 	}
 
 	/*
@@ -350,8 +358,9 @@ MSScore {
 	pgbr = "the page-break measure numbers (or nil)"
 	sysbr = "the system-break measure numbers (or nil)"
 	lyr = "the per-staff lyrics (or nil)"
+	ntn = "the notation engine Symbol (or nil -> \\verovio)"
 	*/
-	init { | v, cl, m, k, br, t, instr, bk, mo, ch, wr, i, sp, sc, sd, pg, ph, scr, host, lport, chg, pgbr, sysbr, lyr |
+	init { | v, cl, m, k, br, t, instr, bk, mo, ch, wr, i, sp, sc, sd, pg, ph, scr, host, lport, chg, pgbr, sysbr, lyr, ntn |
 		voices = v.collect({ |x| x.isKindOf(Panola).if({ x }, { Panola(x) }) });
 		clefs = cl ? voices.collect({ \treble });
 		meter = m; key = k; braces = br; tempo = t; id = i; space = sp;
@@ -359,6 +368,7 @@ MSScore {
 		pageBreaks = pgbr;                                 // nil -> no forced page breaks (auto-pagination)
 		systemBreaks = sysbr;                              // nil -> no forced system/line breaks
 		lyrics = lyr;                                      // nil -> no lyrics; else per-staff verse lines
+		notation = ntn ? \verovio;                          // \verovio (MEI, paginated) or \lilypond (single cropped image)
 		instruments = instr ? voices.collect({ \default });
 		backends = bk ? voices.collect({ \internal });
 		channels = ch ? voices.collect({ |x, ix| ix });   // default: each voice on its own MIDI channel
@@ -422,22 +432,31 @@ MSScore {
 	mei { ^Panola.scoreAsMEI(voices, changes ? [( measure: 1, meter: meter, key: key )], clefs, braces, pageBreaks, systemBreaks, lyrics) }
 
 	/*
+	[method.ly]
+	description = "the standalone LilyPond notation document for this score, built with link::Classes/Panola#*scoreAsLilypond::. Renders on its own (teletype::lilypond file.ly::) and is what MSScore sends when teletype::notation:: is \\lilypond."
+	[method.ly.returns]
+	what = "a LilyPond document (a String)"
+	*/
+	ly { ^Panola.scoreAsLilypond(voices, changes ? [( measure: 1, meter: meter, key: key )], clefs, braces, pageBreaks, systemBreaks, lyrics) }
+
+	/*
 	[method.pr_emitSetup]
 	description = "(private) emit the notation-display OSC setup (create node, background, scale, pos, cursor, paginate, addressable, notationData). Runs INSIDE a Routine (uses waits). cursorOn draws the cursor line or not."
 	[method.pr_emitSetup.args]
 	cursorOn = "true to draw the cursor line, false to hide it"
 	*/
 	pr_emitSetup { | cursorOn |
-		var m = this.mei;
+		var isLy = (notation == \lilypond) or: { notation == \ly };
+		var fmt = isLy.if({ "ly" }, { "mei" }), data = isLy.if({ this.ly }, { this.mei });
 		var snd = { |... a| engine.sendMsg(*a); 0.02.wait };
 		snd.("/ms/scene/" ++ id, "new", "notation");
 		snd.("/ms/scene/" ++ id, "background", "white");
 		snd.("/ms/scene/" ++ id, "scale", scale);
 		if (space == "3d") { snd.("/ms/scene/" ++ id, "pos", 0.0, 0.0, 0.0) } { snd.("/ms/scene/" ++ id, "pos", 0.0, 0.0) };
 		snd.("/ms/scene/" ++ id ++ "/cursor", "show", cursorOn.if({ 1 }, { 0 }));
-		snd.("/ms/scene/" ++ id, "paginate", paginate.if({ 1 }, { 0 }), pageHeight);
+		snd.("/ms/scene/" ++ id, "paginate", (isLy.not and: { paginate }).if({ 1 }, { 0 }), pageHeight);
 		snd.("/ms/scene/" ++ id, "addressable", 1);
-		snd.("/ms/scene/" ++ id, "notationData", "mei", m);
+		snd.("/ms/scene/" ++ id, "notationData", fmt, data);
 	}
 
 	/*
