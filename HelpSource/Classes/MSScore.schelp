@@ -169,7 +169,7 @@ ARGUMENT:: lyrics
 per-staff lyrics: an Array parallel to voices, each entry nil, an Array of verse-line Strings (several verses), or a bare String (one verse). A space separates words, a hyphen separates syllables, an underscore is a melisma, and a backslash escapes the next character. Notation only.
 
 ARGUMENT:: notation
-the notation engine: \verovio (default, MEI + Verovio, paginated) or \lilypond (LilyPond, a single cropped image). For \lilypond set the musicscene/notation/engraver/lilypond project setting.
+the notation engine: \verovio (default, MEI + Verovio) or \lilypond (LilyPond). Both paginate into auto-turning pages. For \lilypond set the musicscene/notation/engraver/lilypond project setting.
 
 returns:: a new MSScore
 
@@ -208,7 +208,7 @@ per-staff lyrics: an Array parallel to voices. Each entry is nil (no lyrics on t
 
 returns:: an Array (parallel to voices) of verse-line lists / Strings / nil, or nil
 METHOD:: notation
-the notation engine: \verovio (default; MEI rendered by Verovio, paginated) or \lilypond (LilyPond source rendered by the LilyPond engraver as a single cropped image — no auto page-turn). For \lilypond, set the musicscene/notation/engraver/lilypond project setting to your LilyPond executable.
+the notation engine: \verovio (default; MEI rendered by Verovio) or \lilypond (LilyPond source rendered by the LilyPond engraver). Both paginate into auto-turning pages (use paginate:/pageHeight:/pageBreaks:); \lilypond additionally outlines its text (lyrics/dynamics/tuplet numbers) so it shows in Godot. For \lilypond, set the musicscene/notation/engraver/lilypond project setting to your LilyPond executable.
 
 returns:: a Symbol (\verovio or \lilypond)
 METHOD:: braces
@@ -380,6 +380,10 @@ METHOD:: ly
 the standalone LilyPond notation document for this score, built with link::Classes/Panola#*scoreAsLilypond::. Renders on its own (teletype::lilypond file.ly::) and is what MSScore sends when teletype::notation:: is \lilypond.
 
 returns:: a LilyPond document (a String)
+METHOD:: pr_paginateInt
+(private) the paginate flag as 1/0 for OSC. LilyPond now paginates like Verovio (no forced off).
+
+returns:: 1 if paginating, else 0
 METHOD:: pr_emitSetup
 (private) emit the notation-display OSC setup (create node, background, scale, pos, cursor, paginate, addressable, notationData). Runs INSIDE a Routine (uses waits). cursorOn draws the cursor line or not.
 

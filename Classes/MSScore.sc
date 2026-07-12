@@ -151,7 +151,7 @@ MSScore {
 	var <lyrics;
 	/*
 	[method.notation]
-	description = "the notation engine: \\verovio (default; MEI rendered by Verovio, paginated) or \\lilypond (LilyPond source rendered by the LilyPond engraver as a single cropped image — no auto page-turn). For \\lilypond, set the musicscene/notation/engraver/lilypond project setting to your LilyPond executable."
+	description = "the notation engine: \\verovio (default; MEI rendered by Verovio) or \\lilypond (LilyPond source rendered by the LilyPond engraver). Both paginate into auto-turning pages (use paginate:/pageHeight:/pageBreaks:); \\lilypond additionally outlines its text (lyrics/dynamics/tuplet numbers) so it shows in Godot. For \\lilypond, set the musicscene/notation/engraver/lilypond project setting to your LilyPond executable."
 	[method.notation.returns]
 	what = "a Symbol (\\verovio or \\lilypond)"
 	*/
@@ -319,7 +319,7 @@ MSScore {
 	pageBreaks = "an Array of 1-based measure numbers where a new PAGE starts (nil for none); manual pagination, auto page-fill off. Use with paginate:true."
 	systemBreaks = "an Array of 1-based measure numbers where a new SYSTEM (line) starts (nil for none); auto pagination is kept."
 	lyrics = "per-staff lyrics: an Array parallel to voices, each entry nil, an Array of verse-line Strings (several verses), or a bare String (one verse). A space separates words, a hyphen separates syllables, an underscore is a melisma, and a backslash escapes the next character. Notation only."
-	notation = "the notation engine: \\verovio (default, MEI + Verovio, paginated) or \\lilypond (LilyPond, a single cropped image). For \\lilypond set the musicscene/notation/engraver/lilypond project setting."
+	notation = "the notation engine: \\verovio (default, MEI + Verovio) or \\lilypond (LilyPond). Both paginate into auto-turning pages. For \\lilypond set the musicscene/notation/engraver/lilypond project setting."
 	[classmethod.new.returns]
 	what = "a new MSScore"
 	*/
@@ -368,7 +368,7 @@ MSScore {
 		pageBreaks = pgbr;                                 // nil -> no forced page breaks (auto-pagination)
 		systemBreaks = sysbr;                              // nil -> no forced system/line breaks
 		lyrics = lyr;                                      // nil -> no lyrics; else per-staff verse lines
-		notation = ntn ? \verovio;                          // \verovio (MEI, paginated) or \lilypond (single cropped image)
+		notation = ntn ? \verovio;                          // \verovio (MEI) or \lilypond — both paginate into auto-turning pages
 		instruments = instr ? voices.collect({ \default });
 		backends = bk ? voices.collect({ \internal });
 		channels = ch ? voices.collect({ |x, ix| ix });   // default: each voice on its own MIDI channel
@@ -440,6 +440,14 @@ MSScore {
 	ly { ^Panola.scoreAsLilypond(voices, changes ? [( measure: 1, meter: meter, key: key )], clefs, braces, pageBreaks, systemBreaks, lyrics) }
 
 	/*
+	[method.pr_paginateInt]
+	description = "(private) the paginate flag as 1/0 for OSC. LilyPond now paginates like Verovio (no forced off)."
+	[method.pr_paginateInt.returns]
+	what = "1 if paginating, else 0"
+	*/
+	pr_paginateInt { ^paginate.if({ 1 }, { 0 }) }
+
+	/*
 	[method.pr_emitSetup]
 	description = "(private) emit the notation-display OSC setup (create node, background, scale, pos, cursor, paginate, addressable, notationData). Runs INSIDE a Routine (uses waits). cursorOn draws the cursor line or not."
 	[method.pr_emitSetup.args]
@@ -454,7 +462,7 @@ MSScore {
 		snd.("/ms/scene/" ++ id, "scale", scale);
 		if (space == "3d") { snd.("/ms/scene/" ++ id, "pos", 0.0, 0.0, 0.0) } { snd.("/ms/scene/" ++ id, "pos", 0.0, 0.0) };
 		snd.("/ms/scene/" ++ id ++ "/cursor", "show", cursorOn.if({ 1 }, { 0 }));
-		snd.("/ms/scene/" ++ id, "paginate", (isLy.not and: { paginate }).if({ 1 }, { 0 }), pageHeight);
+		snd.("/ms/scene/" ++ id, "paginate", this.pr_paginateInt, pageHeight);
 		snd.("/ms/scene/" ++ id, "addressable", 1);
 		snd.("/ms/scene/" ++ id, "notationData", fmt, data);
 	}
