@@ -381,7 +381,7 @@ the standalone LilyPond notation document for this score, built with link::Class
 
 returns:: a LilyPond document (a String)
 METHOD:: pr_paginateInt
-(private) the paginate flag as 1/0 for OSC. LilyPond now paginates like Verovio (no forced off).
+(private) the paginate flag as 1/0 for OSC (used for both \verovio and \lilypond).
 
 returns:: 1 if paginating, else 0
 METHOD:: pr_emitSetup

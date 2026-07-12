@@ -441,7 +441,7 @@ MSScore {
 
 	/*
 	[method.pr_paginateInt]
-	description = "(private) the paginate flag as 1/0 for OSC. LilyPond now paginates like Verovio (no forced off)."
+	description = "(private) the paginate flag as 1/0 for OSC (used for both \\verovio and \\lilypond)."
 	[method.pr_paginateInt.returns]
 	what = "1 if paginating, else 0"
 	*/
