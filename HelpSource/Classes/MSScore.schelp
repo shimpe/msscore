@@ -168,6 +168,9 @@ an Array of 1-based measure numbers where a new SYSTEM (line) starts (nil for no
 ARGUMENT:: lyrics
 per-staff lyrics: an Array parallel to voices, each entry nil, an Array of verse-line Strings (several verses), or a bare String (one verse). A space separates words, a hyphen separates syllables, an underscore is a melisma, and a backslash escapes the next character. Notation only.
 
+ARGUMENT:: notation
+the notation engine: \verovio (default, MEI + Verovio, paginated) or \lilypond (LilyPond, a single cropped image). For \lilypond set the musicscene/notation/engraver/lilypond project setting.
+
 returns:: a new MSScore
 
 INSTANCEMETHODS::
@@ -204,6 +207,10 @@ METHOD:: lyrics
 per-staff lyrics: an Array parallel to voices. Each entry is nil (no lyrics on that staff), an Array of verse-line Strings (stacked as <verse n="1">, <verse n="2">, ...), or a bare String (one verse). Whitespace separates words, '-' separates syllables (a hyphen is drawn), a whole-token '_' is a melisma (the next note holds the previous syllable), and '\' escapes the next character. Notation only — lyrics never affect playback.
 
 returns:: an Array (parallel to voices) of verse-line lists / Strings / nil, or nil
+METHOD:: notation
+the notation engine: \verovio (default; MEI rendered by Verovio, paginated) or \lilypond (LilyPond source rendered by the LilyPond engraver as a single cropped image — no auto page-turn). For \lilypond, set the musicscene/notation/engraver/lilypond project setting to your LilyPond executable.
+
+returns:: a Symbol (\verovio or \lilypond)
 METHOD:: braces
 1-based [firstStaff, lastStaff] ranges braced together (e.g. a piano grand staff)
 
@@ -355,6 +362,9 @@ the system-break measure numbers (or nil)
 ARGUMENT:: lyr
 the per-staff lyrics (or nil)
 
+ARGUMENT:: ntn
+the notation engine Symbol (or nil -> \verovio)
+
 returns:: this instance of MSScore
 
 METHOD:: pr_validate
@@ -366,6 +376,10 @@ METHOD:: mei
 the MEI notation document for this score, built with link::Classes/Panola#*scoreAsMEI::. Usable on its own (e.g. to write to a .mei file for any MEI renderer).
 
 returns:: an MEI document (a String)
+METHOD:: ly
+the standalone LilyPond notation document for this score, built with link::Classes/Panola#*scoreAsLilypond::. Renders on its own (teletype::lilypond file.ly::) and is what MSScore sends when teletype::notation:: is \lilypond.
+
+returns:: a LilyPond document (a String)
 METHOD:: pr_emitSetup
 (private) emit the notation-display OSC setup (create node, background, scale, pos, cursor, paginate, addressable, notationData). Runs INSIDE a Routine (uses waits). cursorOn draws the cursor line or not.
 
