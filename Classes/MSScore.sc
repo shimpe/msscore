@@ -7,15 +7,23 @@ related = "Classes/Panola, Classes/Pbind, Classes/Pbindf, Classes/Ppar"
 description = '''
 MSScore turns one or more link::Classes/Panola:: strings into a music-notation score in
 link::https://github.com/shimpe/musicscene##MusicScene:: — a Godot addon that engraves notation (via
-Verovio) and plays it in a 2D or 3D scene, driven over OSC. From a single call it builds MEI with
-link::Classes/Panola::'s teletype::scoreAsMEI::, shows the notation, plays the voices (an
-link::Classes/Ppar:: of each voice's teletype::asPbind::), and follows along with a note-accurate cursor.
+Verovio or LilyPond) and plays it in a 2D or 3D scene, driven over OSC. From a single call it builds the
+score source with link::Classes/Panola:: (teletype::scoreAsMEI:: for Verovio, teletype::scoreAsLilypond::
+for LilyPond), shows the notation, plays the voices (an link::Classes/Ppar:: of each voice's
+teletype::asPbind::), and follows along with a note-accurate cursor.
 
 The voices may be Panola strings (wrapped automatically) or ready link::Classes/Panola:: instances. A long
 score is split into pages that turn automatically as the cursor reaches them. The cursor needs no reply
 round-trip: MusicScene is made addressable (it knows every note's on-page position and staff-system), and
 MSScore simply tells it "the cursor is at beat N" on its own audio clock — so one clock drives both the
 audio and the cursor and they stay in sync.
+
+strong::Notation engine:: — teletype::notation:: picks the engraver: teletype::\verovio:: (default; MEI
+rendered by Verovio) or teletype::\lilypond:: (LilyPond source rendered by the LilyPond engraver). Both
+paginate into auto-turning pages and follow the same cursor, so everything below applies to either engine.
+teletype::\lilypond:: needs the LilyPond executable set in the musicscene/notation/engraver/lilypond
+project setting, and it outlines its text (lyrics/dynamics/tuplet numbers) so they show in Godot. See
+link::Classes/MSScore#-notation::.
 
 code::
 (
@@ -87,8 +95,10 @@ strings directly. You create and own the MIDIOut
 (teletype::MIDIClient.init; MIDIOut.newByName(...)::); MSScore never opens devices. The follow cursor works
 the same over MIDI.
 
-Requires the link::Classes/Panola:: quark, and a running MusicScene instance (with Verovio working —
-teletype::pip install verovio::). Set strong::space:: to match the project's musicscene/space setting.
+Requires the link::Classes/Panola:: quark, and a running MusicScene instance. teletype::\verovio:: needs
+Verovio working (teletype::pip install verovio::); teletype::\lilypond:: needs LilyPond installed and its
+path in the musicscene/notation/engraver/lilypond project setting. Set strong::space:: to match the
+project's musicscene/space setting.
 '''
 */
 MSScore {
